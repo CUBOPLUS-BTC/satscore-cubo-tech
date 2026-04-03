@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+*.env
+!*.env.example
+
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Poetry
+poetry.lock
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Alembic
+# (mantener migrations/ en git, solo ignorar cache)

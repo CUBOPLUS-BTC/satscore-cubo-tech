@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/api/api_exceptions.dart';
 import '../../../core/models/simulation.dart';
-import '../../../core/providers/dio_provider.dart';
+import '../data/simulator_repository.dart';
 
 class SimulatorState {
   final SimulationResult? result;
@@ -17,24 +18,20 @@ class SimulatorNotifier extends Notifier<SimulatorState> {
   Future<void> simulate(double amountUsd, int daysHistory) async {
     state = const SimulatorState(isLoading: true);
     try {
-      final dio = ref.read(dioProvider);
-      final response = await dio.post(
-        '/simulate/volatility',
-        data: {
-          'amount_usd': amountUsd,
-          'days_history': daysHistory,
-        },
+      final repo = ref.read(simulatorRepositoryProvider);
+      final result = await repo.simulateVolatility(
+        amountUsd: amountUsd,
+        daysHistory: daysHistory,
       );
-      final result =
-          SimulationResult.fromJson(response.data as Map<String, dynamic>);
       state = SimulatorState(result: result);
+    } on ApiException catch (e) {
+      state = SimulatorState(error: e.message);
     } catch (e) {
-      state = SimulatorState(error: e.toString());
+      state = SimulatorState(error: 'Failed to simulate');
     }
   }
 }
 
-final simulatorProvider =
-    NotifierProvider<SimulatorNotifier, SimulatorState>(
+final simulatorProvider = NotifierProvider<SimulatorNotifier, SimulatorState>(
   SimulatorNotifier.new,
 );

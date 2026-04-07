@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/api/api_exceptions.dart';
 import '../../../core/models/score_result.dart';
-import '../../../core/providers/dio_provider.dart';
+import '../data/score_repository.dart';
 
 class ScoreState {
   final ScoreResult? result;
@@ -17,13 +18,18 @@ class ScoreNotifier extends Notifier<ScoreState> {
   Future<void> calculateScore(String address) async {
     state = const ScoreState(isLoading: true);
     try {
-      final dio = ref.read(dioProvider);
-      final response = await dio.get('/score/$address');
-      final result = ScoreResult.fromJson(response.data as Map<String, dynamic>);
+      final repo = ref.read(scoreRepositoryProvider);
+      final result = await repo.fetchScore(address);
       state = ScoreState(result: result);
+    } on ApiException catch (e) {
+      state = ScoreState(error: e.message);
     } catch (e) {
-      state = ScoreState(error: e.toString());
+      state = ScoreState(error: 'Failed to calculate score');
     }
+  }
+
+  void reset() {
+    state = const ScoreState();
   }
 }
 

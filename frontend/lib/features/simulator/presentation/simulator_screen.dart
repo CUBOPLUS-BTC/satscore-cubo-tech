@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/models/simulation.dart';
+import '../../../shared/widgets/loading_shimmer.dart';
+import '../../../shared/widgets/risk_chart.dart';
+import '../providers/simulator_provider.dart';
 
 class SimulatorScreen extends ConsumerStatefulWidget {
   const SimulatorScreen({super.key});
@@ -16,9 +18,6 @@ class SimulatorScreen extends ConsumerStatefulWidget {
 class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
   final _amountController = TextEditingController();
   int _period = 90;
-  bool _isLoading = false;
-  SimulationResult? _result;
-  String? _error;
 
   static const _periodOptions = {
     '30 days': 30,
@@ -33,45 +32,14 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
     super.dispose();
   }
 
-  Future<void> _handleSimulate() async {
+  void _handleSimulate() {
     final amountText = _amountController.text.trim();
-    if (amountText.isEmpty) {
-      setState(() => _error = 'Please enter an amount');
-      return;
-    }
+    if (amountText.isEmpty) return;
 
     final amount = double.tryParse(amountText);
-    if (amount == null || amount <= 0) {
-      setState(() => _error = 'Enter a valid amount');
-      return;
-    }
+    if (amount == null || amount <= 0) return;
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-      _result = null;
-    });
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-      _result = SimulationResult(
-        dailyAnalysis: [
-          const DayAnalysis(waitDays: 7, avgReturn: 1.2, stdDev: 3.1, worstCase: -5.8, bestCase: 8.2, riskZone: 'low'),
-          const DayAnalysis(waitDays: 14, avgReturn: 2.1, stdDev: 4.5, worstCase: -7.2, bestCase: 11.4, riskZone: 'low'),
-          const DayAnalysis(waitDays: 30, avgReturn: 3.8, stdDev: 6.2, worstCase: -9.1, bestCase: 16.7, riskZone: 'medium'),
-          const DayAnalysis(waitDays: 60, avgReturn: 5.4, stdDev: 8.8, worstCase: -12.5, bestCase: 23.3, riskZone: 'medium'),
-          const DayAnalysis(waitDays: 90, avgReturn: 7.2, stdDev: 11.3, worstCase: -15.8, bestCase: 30.2, riskZone: 'high'),
-        ],
-        recommendation: 'Based on historical volatility, waiting 30 days offers the best risk-adjusted return for this amount.',
-        riskLevel: 'medium',
-        optimalDay: 30,
-        expectedReturn: 3.8,
-      );
-    });
+    ref.read(simulatorProvider.notifier).simulate(amount, _period);
   }
 
   Color _riskColor(String riskZone) {
@@ -89,19 +57,22 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(simulatorProvider);
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInputSection(),
           const SizedBox(height: 16),
-          _buildSimulateButton(),
+          _buildSimulateButton(state.isLoading),
           const SizedBox(height: 24),
-          if (_error != null) _buildError(),
-          if (_isLoading) _buildLoading(),
-          if (_result == null && !_isLoading && _error == null) _buildInitial(),
-          if (_result != null && !_isLoading) _buildResult(),
+          if (state.error != null) _buildError(state.error!),
+          if (state.isLoading) _buildLoading(),
+          if (state.result == null && !state.isLoading && state.error == null)
+            _buildEmpty(),
+          if (state.result != null && !state.isLoading) _buildResult(state),
         ],
       ),
     );
@@ -121,12 +92,12 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
             ),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.borderSubtle),
           ),
           child: DropdownButtonHideUnderline(
@@ -135,10 +106,17 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
               dropdownColor: AppColors.surfaceElevated,
               style: AppTypography.mono,
               items: _periodOptions.entries
-                  .map((e) => DropdownMenuItem(
-                        value: e.value,
-                        child: Text(e.key, style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary)),
-                      ))
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e.value,
+                      child: Text(
+                        e.key,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _period = v);
@@ -150,18 +128,18 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
     );
   }
 
-  Widget _buildSimulateButton() {
+  Widget _buildSimulateButton(bool isLoading) {
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _handleSimulate,
+        onPressed: isLoading ? null : _handleSimulate,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accent,
           foregroundColor: Colors.black,
           disabledBackgroundColor: AppColors.accent.withValues(alpha: 0.5),
         ),
-        child: _isLoading
+        child: isLoading
             ? const SizedBox(
                 width: 20,
                 height: 20,
@@ -175,50 +153,133 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
     );
   }
 
-  Widget _buildInitial() {
+  Widget _buildEmpty() {
     return Padding(
-      padding: const EdgeInsets.only(top: 48),
-      child: Center(
-        child: Text(
-          'Enter an amount and period to simulate BTC price volatility and find the optimal time to transact.',
-          style: AppTypography.bodyMedium,
-          textAlign: TextAlign.center,
-        ),
+      padding: const EdgeInsets.only(top: 32),
+      child: Column(
+        children: [
+          Text('Predict the best moment', style: AppTypography.titleMedium),
+          const SizedBox(height: 8),
+          Text(
+            'Simulate Bitcoin volatility to find when\nto buy, sell, or send with less risk',
+            style: AppTypography.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildLoading() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 64),
-      child: Center(
-        child: CircularProgressIndicator(color: AppColors.accent),
-      ),
-    );
-  }
-
-  Widget _buildError() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        _error!,
-        style: AppTypography.bodyMedium.copyWith(color: AppColors.danger),
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        children: [
+          LoadingShimmer.card(height: 80),
+          const SizedBox(height: 8),
+          LoadingShimmer.card(height: 220),
+          const SizedBox(height: 8),
+          LoadingShimmer.card(height: 200),
+        ],
       ),
     );
   }
 
-  Widget _buildResult() {
-    final result = _result!;
+  Widget _buildError(String error) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, size: 18, color: AppColors.danger),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              error,
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.danger),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final amountText = _amountController.text.trim();
+              if (amountText.isEmpty) return;
+              final amount = double.tryParse(amountText);
+              if (amount == null || amount <= 0) return;
+              ref.read(simulatorProvider.notifier).simulate(amount, _period);
+            },
+            child: Text(
+              'Retry',
+              style: AppTypography.labelLarge.copyWith(color: AppColors.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResult(SimulatorState state) {
+    final result = state.result!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildRecommendationCard(result),
-        const SizedBox(height: 16),
-        _buildChart(result),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        _buildQuickStats(result),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.borderSubtle),
+          ),
+          child: RiskChart(data: result.dailyAnalysis),
+        ),
+        const SizedBox(height: 12),
         _buildDataTable(result),
       ],
+    );
+  }
+
+  Widget _buildQuickStats(SimulationResult result) {
+    return Row(
+      children: [
+        _statChip('Optimal', '${result.optimalDay}d', AppColors.accent),
+        const SizedBox(width: 8),
+        _statChip(
+          'Expected',
+          Formatters.formatPercentage(result.expectedReturn),
+          AppColors.success,
+        ),
+        const SizedBox(width: 8),
+        _statChip('Risk', result.riskLevel, _riskColor(result.riskLevel)),
+      ],
+    );
+  }
+
+  Widget _statChip(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: AppTypography.mono.copyWith(color: color)),
+            const SizedBox(height: 4),
+            Text(label, style: AppTypography.labelSmall),
+          ],
+        ),
+      ),
     );
   }
 
@@ -228,15 +289,15 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(4),
-        border: Border(
+        borderRadius: BorderRadius.circular(8),
+        border: const Border(
           left: BorderSide(color: AppColors.accent, width: 3),
           top: BorderSide(color: AppColors.borderSubtle),
           right: BorderSide(color: AppColors.borderSubtle),
           bottom: BorderSide(color: AppColors.borderSubtle),
         ),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -244,7 +305,9 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
             children: [
               Text(
                 'RECOMMENDATION',
-                style: AppTypography.labelMedium.copyWith(color: AppColors.accent),
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.accent,
+                ),
               ),
               const Spacer(),
               Container(
@@ -267,140 +330,70 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
     );
   }
 
-  Widget _buildChart(SimulationResult result) {
-    final data = result.dailyAnalysis;
-    if (data.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      height: 220,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 10,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: AppColors.borderSubtle,
-              strokeWidth: 1,
-            ),
-          ),
-          titlesData: FlTitlesData(
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 28,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    '${value.toInt()}d',
-                    style: AppTypography.labelSmall,
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    '${value.toInt()}%',
-                    style: AppTypography.labelSmall,
-                  );
-                },
-              ),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => AppColors.surfaceElevated,
-              tooltipBorder: const BorderSide(color: AppColors.borderSubtle),
-              tooltipRoundedRadius: 4,
-              getTooltipItems: (spots) => spots.map((spot) {
-                final colors = [AppColors.accent, AppColors.success, AppColors.danger];
-                final labels = ['Avg', 'Best', 'Worst'];
-                return LineTooltipItem(
-                  '${labels[spot.barIndex]}: ${spot.y.toStringAsFixed(1)}%',
-                  AppTypography.monoSmall.copyWith(color: colors[spot.barIndex]),
-                );
-              }).toList(),
-            ),
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              spots: data.map((d) => FlSpot(d.waitDays.toDouble(), d.avgReturn)).toList(),
-              isCurved: true,
-              color: AppColors.accent,
-              barWidth: 2,
-              dotData: const FlDotData(show: false),
-            ),
-            LineChartBarData(
-              spots: data.map((d) => FlSpot(d.waitDays.toDouble(), d.bestCase)).toList(),
-              isCurved: true,
-              color: AppColors.success,
-              barWidth: 1,
-              dashArray: [6, 4],
-              dotData: const FlDotData(show: false),
-            ),
-            LineChartBarData(
-              spots: data.map((d) => FlSpot(d.waitDays.toDouble(), d.worstCase)).toList(),
-              isCurved: true,
-              color: AppColors.danger,
-              barWidth: 1,
-              dashArray: [6, 4],
-              dotData: const FlDotData(show: false),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildDataTable(SimulationResult result) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
-                Expanded(flex: 2, child: Text('Day', style: AppTypography.labelMedium)),
-                Expanded(flex: 3, child: Text('Avg Return', style: AppTypography.labelMedium)),
-                Expanded(flex: 2, child: Text('Risk', style: AppTypography.labelMedium)),
-                Expanded(flex: 3, child: Text('Worst Case', style: AppTypography.labelMedium)),
+                Expanded(
+                  flex: 2,
+                  child: Text('Day', style: AppTypography.labelMedium),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text('Avg Return', style: AppTypography.labelMedium),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text('Risk', style: AppTypography.labelMedium),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text('Worst Case', style: AppTypography.labelMedium),
+                ),
               ],
             ),
           ),
           const Divider(height: 1, color: AppColors.borderSubtle),
-          ...result.dailyAnalysis.map((day) {
+          ...result.dailyAnalysis.map<Widget>((day) {
             final isOptimal = day.waitDays == result.optimalDay;
             final riskColor = _riskColor(day.riskZone);
 
             return Container(
-              color: isOptimal ? AppColors.accent.withValues(alpha: 0.1) : null,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: isOptimal
+                  ? AppColors.accent.withValues(alpha: 0.08)
+                  : null,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
                   Expanded(
                     flex: 2,
-                    child: Text(
-                      '${day.waitDays}',
-                      style: AppTypography.mono.copyWith(
-                        color: isOptimal ? AppColors.accent : null,
-                      ),
+                    child: Row(
+                      children: [
+                        Text(
+                          '${day.waitDays}',
+                          style: AppTypography.mono.copyWith(
+                            color: isOptimal ? AppColors.accent : null,
+                          ),
+                        ),
+                        if (isOptimal)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 4),
+                            child: Icon(
+                              Icons.star,
+                              size: 12,
+                              color: AppColors.accent,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   Expanded(
@@ -408,7 +401,9 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
                     child: Text(
                       Formatters.formatPercentage(day.avgReturn),
                       style: AppTypography.mono.copyWith(
-                        color: day.avgReturn >= 0 ? AppColors.success : AppColors.danger,
+                        color: day.avgReturn >= 0
+                            ? AppColors.success
+                            : AppColors.danger,
                       ),
                     ),
                   ),
@@ -423,7 +418,9 @@ class _SimulatorScreenState extends ConsumerState<SimulatorScreen> {
                     flex: 3,
                     child: Text(
                       Formatters.formatPercentage(day.worstCase),
-                      style: AppTypography.mono.copyWith(color: AppColors.danger),
+                      style: AppTypography.mono.copyWith(
+                        color: AppColors.danger,
+                      ),
                     ),
                   ),
                 ],

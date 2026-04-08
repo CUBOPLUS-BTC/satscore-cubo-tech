@@ -4,204 +4,258 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/loading_shimmer.dart';
+import '../providers/price_provider.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final priceAsync = ref.watch(priceProvider);
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _BalanceHero(priceAsync: priceAsync),
+            const SizedBox(height: 24),
+            _ToolsGrid(context: context),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final double _btcPrice = 84231.00;
-  final int _sourcesCount = 5;
-  final bool _priceVerified = true;
-  final int? _score = null;
-  final String? _rank = null;
-  final int _networkFee = 12;
-  final String _feePriority = 'medium';
+class _BalanceHero extends ConsumerWidget {
+  final AsyncValue priceAsync;
+
+  const _BalanceHero({required this.priceAsync});
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildPriceSection(),
-          const SizedBox(height: 12),
-          _buildMetricCards(),
-          const SizedBox(height: 24),
-          Text('Quick Actions', style: AppTypography.titleSmall),
-          const SizedBox(height: 12),
-          _buildActionCard(
-            icon: Icons.speed,
-            title: 'Analyze Address',
-            subtitle: 'Check any Bitcoin address score',
-            route: '/score',
+          Text(
+            'BTC/USD',
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
           const SizedBox(height: 8),
-          _buildActionCard(
-            icon: Icons.show_chart,
-            title: 'Volatility Simulator',
-            subtitle: 'Simulate BTC price scenarios',
-            route: '/simulator',
-          ),
-          const SizedBox(height: 8),
-          _buildActionCard(
-            icon: Icons.send,
-            title: 'Remittance Optimizer',
-            subtitle: 'Compare transfer channels',
-            route: '/remittance',
+          priceAsync.when(
+            data: (price) {
+              return Column(
+                children: [
+                  Text(
+                    Formatters.formatUSD(price.priceUsd),
+                    style: AppTypography.displayLarge.copyWith(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bitcoin Price',
+                    style: AppTypography.mono.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => Column(
+              children: [
+                const LoadingShimmer(width: 160, height: 32),
+                const SizedBox(height: 8),
+                LoadingShimmer.text(width: 140),
+              ],
+            ),
+            error: (err, _) => Column(
+              children: [
+                Text(
+                  'Unable to load price',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => ref.invalidate(priceProvider),
+                  child: Text(
+                    'Retry',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildPriceSection() {
+class _ToolsGrid extends StatelessWidget {
+  final BuildContext context;
+
+  const _ToolsGrid({required this.context});
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          Formatters.formatUSD(_btcPrice),
-          style: AppTypography.displayMedium,
-        ),
-        const SizedBox(height: 4),
         Row(
           children: [
-            Text(
-              'from $_sourcesCount sources',
-              style: AppTypography.bodySmall,
-            ),
-            if (_priceVerified) ...[
-              const SizedBox(width: 8),
-              Icon(Icons.verified, size: 14, color: AppColors.success),
-              const SizedBox(width: 4),
-              Text(
-                'verified',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.success,
-                ),
+            Expanded(
+              child: _ToolCard(
+                icon: Icons.analytics_outlined,
+                title: 'Score',
+                subtitle: 'Address health analysis',
+                accentColor: AppColors.accent,
+                onTap: () => context.go('/score'),
               ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _ToolCard(
+                icon: Icons.candlestick_chart_outlined,
+                title: 'Simulator',
+                subtitle: 'Volatility & timing',
+                accentColor: AppColors.primary,
+                onTap: () => context.go('/simulator'),
+              ),
+            ),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildMetricCards() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: AppColors.borderSubtle),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Score',
-                  style: AppTypography.labelMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _score != null ? Formatters.formatScore(_score) : '---',
-                  style: AppTypography.titleLarge,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _rank ?? 'No data',
-                  style: AppTypography.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: AppColors.borderSubtle),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Network Fee',
-                  style: AppTypography.labelMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  Formatters.formatSatVb(_networkFee),
-                  style: AppTypography.mono,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _feePriority,
-                  style: AppTypography.bodySmall,
-                ),
-              ],
-            ),
-          ),
+        const SizedBox(height: 8),
+        _ToolCardWide(
+          icon: Icons.route_outlined,
+          title: 'Remittance Optimizer',
+          subtitle: 'Compare Lightning, on-chain, and traditional channels',
+          accentColor: AppColors.success,
+          onTap: () => context.go('/remittance'),
         ),
       ],
     );
   }
+}
 
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String route,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppColors.borderSubtle),
+class _ToolCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  const _ToolCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 20, color: accentColor),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: AppTypography.titleSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(subtitle, style: AppTypography.bodySmall),
+            ],
+          ),
+        ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(4),
-          onTap: () => context.go(route),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: AppColors.accent),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTypography.titleSmall.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+    );
+  }
+}
+
+class _ToolCardWide extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  const _ToolCardWide({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: accentColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.titleSmall.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 2),
-                      Text(subtitle, style: AppTypography.bodySmall),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: AppTypography.bodySmall),
+                  ],
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: AppColors.textTertiary,
-                ),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ],
           ),
         ),
       ),

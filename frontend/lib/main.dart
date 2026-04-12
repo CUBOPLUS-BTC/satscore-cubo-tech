@@ -7,6 +7,9 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   LocaleSettings.useDeviceLocale();
   runApp(
-    TranslationProvider(child: const ProviderScope(child: SatsScoreApp())),
+    TranslationProvider(
+      translations: $currentLocale == AppLocale.es ? esTranslations : enTranslations,
+      child: const ProviderScope(child: SatsScoreApp()),
+    ),
   );
 }

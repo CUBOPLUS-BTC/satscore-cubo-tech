@@ -14,7 +14,7 @@ class SatsScoreApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       routerConfig: appRouter,
-      locale: TranslationProvider.of(context).flutterLocale,
+      locale: $currentLocale.flutterLocale,
       supportedLocales: AppLocaleUtils.supportedLocales,
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
     );

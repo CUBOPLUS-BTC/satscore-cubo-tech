@@ -1,3 +1,4 @@
+import json
 from pydantic_settings import BaseSettings
 
 
@@ -14,6 +15,11 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if isinstance(self.CORS_ORIGINS, str):
+            self.CORS_ORIGINS = json.loads(self.CORS_ORIGINS)
 
 
 settings = Settings()

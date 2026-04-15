@@ -1,4 +1,6 @@
-class ApiError extends Error {
+import { auth } from '$lib/stores/auth.svelte';
+
+export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
     super(message);
@@ -11,6 +13,9 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
+
+  const authHeader = auth.getAuthHeader();
+  if (authHeader) headers['Authorization'] = authHeader;
 
   const res = await fetch(url, { ...options, headers });
 

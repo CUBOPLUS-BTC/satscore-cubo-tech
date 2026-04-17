@@ -8,6 +8,7 @@
   import Gauge from 'phosphor-svelte/lib/Gauge';
   import Waveform from 'phosphor-svelte/lib/Waveform';
   import PaperPlaneTilt from 'phosphor-svelte/lib/PaperPlaneTilt';
+  import Wallet from 'phosphor-svelte/lib/Wallet';
 
   let { data } = $props<{ data: { price: VerifiedPrice | null } }>();
 
@@ -29,6 +30,12 @@
       title: 'Remittance',
       description: 'Send money across borders with competitive rates and fast delivery',
       href: '/remittance'
+    },
+    {
+      icon: Wallet,
+      title: 'Retirement',
+      description: 'Plan your Bitcoin retirement with our comprehensive calculator',
+      href: '/retirement'
     }
   ];
 </script>

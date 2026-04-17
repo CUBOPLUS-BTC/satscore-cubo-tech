@@ -17,15 +17,16 @@
 
   let { children } = $props();
 
-  if (browser && !auth.isAuthenticated) {
-    goto('/login', { replaceState: true });
-  }
+  // TEMPORARILY DISABLED - auth requires api.eclalune.com
+  // if (browser && !auth.isAuthenticated) {
+  //   goto('/login', { replaceState: true });
+  // }
 
   const navItems = [
     { href: '/home', icon: Flame, label: i18n.t.nav.home },
     { href: '/score', icon: Gauge, label: i18n.t.nav.score },
     { href: '/simulator', icon: Waveform, label: i18n.t.nav.simulator },
-    { href: '/remittance', icon: PaperPlaneTilt, label: i18n.t.nav.remittance },
+    { href: '/remittance', icon: PaperPlaneTilt, label: 'Pensiones' },
   ];
 
   let currentPath = $derived(page.url.pathname);

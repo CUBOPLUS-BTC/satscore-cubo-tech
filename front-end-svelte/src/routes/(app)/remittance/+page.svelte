@@ -49,6 +49,11 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Remittance — Magma</title>
+	<meta name="description" content="Compare cross-border transfer channels and find the best option for your Bitcoin payments." />
+</svelte:head>
+
 <div class="space-y-8">
 	<div class="space-y-2">
 		<h1 class="text-3xl font-bold tracking-tight">Remittance</h1>
@@ -109,7 +114,7 @@
 
 	{#if isLoading}
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-			{#each [1, 2, 3] as _}
+			{#each [1, 2, 3] as _, i (i)}
 				<Card>
 					<CardHeader>
 						<Skeleton class="h-5 w-24" />
@@ -163,7 +168,7 @@
 			<div>
 				<h2 class="text-lg font-semibold mb-4">Available Channels</h2>
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-					{#each result.channels as channel}
+					{#each result.channels as channel (channel.name)}
 						<ChannelCard {channel} />
 					{/each}
 				</div>

@@ -17,7 +17,7 @@ class KrakenClient:
             if now < expiry:
                 return data
 
-        req = urllib.request.Request(url, headers={"User-Agent": "SatsScore/1.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Vulk/1.0"})
         with urllib.request.urlopen(req, timeout=30) as response:
             data = json.loads(response.read().decode())
 

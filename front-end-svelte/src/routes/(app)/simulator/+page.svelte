@@ -55,6 +55,11 @@
   }
 </script>
 
+<svelte:head>
+  <title>Volatility Simulator — Magma</title>
+  <meta name="description" content="Model future Bitcoin scenarios and optimize your financial decisions with volatility analysis." />
+</svelte:head>
+
 <div class="space-y-6">
   <div class="space-y-2">
     <h1 class="text-3xl font-bold tracking-tight">Volatility Simulator</h1>
@@ -152,7 +157,7 @@
             </TableRow>
           </TableHeader>
           <TableBody>
-            {#each result.daily_analysis as row}
+            {#each result.daily_analysis as row (row.wait_days)}
               <TableRow>
                 <TableCell>{row.wait_days}</TableCell>
                 <TableCell>{row.avg_return.toFixed(2)}%</TableCell>

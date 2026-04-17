@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { nip19, generateSecretKey, getPublicKey } from 'nostr-tools';
 	import { Button } from '$lib/components/ui/button';
@@ -20,12 +21,14 @@
 	let generatedKeys = $state<{ nsec: string; npub: string } | null>(null);
 	let copiedNsec = $state(false);
 	let copiedNpub = $state(false);
+	let nsecTimer: ReturnType<typeof setTimeout> | undefined;
+	let npubTimer: ReturnType<typeof setTimeout> | undefined;
 
 	async function handleConnect() {
 		if (!key.trim()) return;
 		try {
 			await auth.login(key.trim());
-			goto('/home');
+			goto(resolve('/home'));
 		} catch {
 			// error shown via auth.error
 		}
@@ -44,8 +47,15 @@
 
 	async function copyToClipboard(text: string, which: 'nsec' | 'npub') {
 		await navigator.clipboard.writeText(text);
-		if (which === 'nsec') { copiedNsec = true; setTimeout(() => copiedNsec = false, 2000); }
-		else { copiedNpub = true; setTimeout(() => copiedNpub = false, 2000); }
+		if (which === 'nsec') {
+			clearTimeout(nsecTimer);
+			copiedNsec = true;
+			nsecTimer = setTimeout(() => (copiedNsec = false), 2000);
+		} else {
+			clearTimeout(npubTimer);
+			copiedNpub = true;
+			npubTimer = setTimeout(() => (copiedNpub = false), 2000);
+		}
 	}
 
 	function useGeneratedKey() {
@@ -53,6 +63,11 @@
 		showGenDialog = false;
 	}
 </script>
+
+<svelte:head>
+	<title>Connect — Magma</title>
+	<meta name="description" content="Connect your Nostr key to access Magma Bitcoin Financial Intelligence." />
+</svelte:head>
 
 <div class="flex min-h-screen bg-muted/30">
 	<!-- Left branding panel (desktop) -->
@@ -110,6 +125,7 @@
 									type="button"
 									onclick={() => showKey = !showKey}
 									class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+									aria-label={showKey ? 'Hide private key' : 'Show private key'}
 								>
 									{#if showKey}
 										<EyeSlash size={16} />
@@ -188,6 +204,7 @@
 						size="sm"
 						class="shrink-0 h-9 w-9 p-0"
 						onclick={() => copyToClipboard(generatedKeys!.nsec, 'nsec')}
+						aria-label="Copy private key"
 					>
 						{#if copiedNsec}
 							<Check size={14} class="text-green-500" />
@@ -212,6 +229,7 @@
 						size="sm"
 						class="shrink-0 h-9 w-9 p-0"
 						onclick={() => copyToClipboard(generatedKeys!.npub, 'npub')}
+						aria-label="Copy public key"
 					>
 						{#if copiedNpub}
 							<Check size={14} class="text-green-500" />

@@ -12,7 +12,7 @@ class CoinGeckoClient:
         self._cache: dict[str, tuple[Any, float]] = {}
 
     def _headers(self) -> dict:
-        headers = {"User-Agent": "SatsScore/1.0"}
+        headers = {"User-Agent": "Vulk/1.0"}
         if self.api_key:
             headers["x-cg-demo-api-key"] = self.api_key
         return headers

@@ -1,7 +1,7 @@
 services:
   backend:
-    image: satsscore-backend:latest
-    container_name: satsscore_backend
+    image: vulk-backend:latest
+    container_name: vulk_backend
     restart: always
     env_file:
       - .env
@@ -23,16 +23,16 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: satsscore_db
+    container_name: vulk_db
     restart: always
     environment:
-      POSTGRES_DB: satsscore
-      POSTGRES_USER: satsscore
+      POSTGRES_DB: vulk
+      POSTGRES_USER: vulk
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me-in-prod}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U satsscore"]
+      test: ["CMD-SHELL", "pg_isready -U vulk"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,4 +42,4 @@ volumes:
 
 networks:
   default:
-    name: satsscore-network
+    name: vulk-network

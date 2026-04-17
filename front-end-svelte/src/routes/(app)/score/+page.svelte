@@ -51,6 +51,11 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Bitcoin Score — Magma</title>
+	<meta name="description" content="Evaluate a Bitcoin address financial health score with breakdown analysis." />
+</svelte:head>
+
 <div class="container mx-auto max-w-4xl px-4 py-12 space-y-8">
 	<div class="space-y-2">
 		<h1 class="text-4xl font-bold tracking-tight">Bitcoin Score</h1>
@@ -60,7 +65,7 @@
 	</div>
 
 	<Card class="p-6">
-		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="flex gap-3">
+		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="flex gap-3" aria-label="Bitcoin address score lookup">
 			<Input
 				bind:value={address}
 				placeholder="bc1q..."
@@ -113,7 +118,7 @@
 				<div class="space-y-6">
 					<h2 class="text-lg font-semibold">Score Breakdown</h2>
 					<div class="space-y-4">
-						{#each breakdownItems as item}
+						{#each breakdownItems as item (item.key)}
 							<BreakdownBar
 								label={item.label}
 								score={result.breakdown[item.key]}
@@ -130,7 +135,7 @@
 				<div class="space-y-4">
 					<h2 class="text-lg font-semibold">Recommendations</h2>
 					<ul class="space-y-2">
-						{#each result.recommendations as recommendation}
+						{#each result.recommendations as recommendation, i (i)}
 							<li class="flex items-start gap-2">
 								<span class="h-1.5 w-1.5 mt-2 rounded-full bg-primary"></span>
 								<span class="text-sm">{recommendation}</span>

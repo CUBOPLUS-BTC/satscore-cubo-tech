@@ -4,11 +4,11 @@
 set -e
 
 # Configuration
-IMAGE_NAME="satsscore-backend"
-CONTAINER_NAME="satsscore_backend"
+IMAGE_NAME="vulk-backend"
+CONTAINER_NAME="vulk_backend"
 PORT=8000
 
-echo "=== SatsScore Backend Deployment ==="
+echo "=== Vulk Backend Deployment ==="
 
 # Navigate to app directory
 cd /app
@@ -32,7 +32,7 @@ docker run -d \
   --restart always \
   --env-file .env.production \
   -p $PORT:8000 \
-  -v $(pwd)/satsscore.db:/app/satsscore.db \
+  -v $(pwd)/vulk.db:/app/vulk.db \
   $IMAGE_NAME:latest
 
 echo "=== Deployment complete ==="

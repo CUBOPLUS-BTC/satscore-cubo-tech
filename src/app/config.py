@@ -6,7 +6,7 @@ load_dotenv()
 
 
 class Settings:
-    DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./satsscore.db")
+    DATABASE_URL: str = os.environ.get("DATABASE_URL", "sqlite:///./vulk.db")
     JWT_SECRET: str = os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = int(os.environ.get("JWT_EXPIRE_MINUTES", "30"))

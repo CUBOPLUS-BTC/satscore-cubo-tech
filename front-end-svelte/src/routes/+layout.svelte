@@ -12,7 +12,11 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Magma</title>
+	<title>Magma — Bitcoin Financial Intelligence</title>
+	<meta name="description" content="Track your sats, analyze your wealth, and understand your financial footprint in the Bitcoin ecosystem." />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta property="og:site_name" content="Magma" />
+	<meta property="og:type" content="website" />
 </svelte:head>
 
 {@render children()}

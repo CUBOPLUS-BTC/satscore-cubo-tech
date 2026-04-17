@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
   import { auth } from '$lib/stores/auth.svelte';
   import { browser } from '$app/environment';
   import { i18n } from '$lib/i18n/index.svelte';
@@ -18,21 +19,21 @@
   let { children } = $props();
 
   if (browser && !auth.isAuthenticated) {
-    goto('/login', { replaceState: true });
+    goto(resolve('/login'), { replaceState: true });
   }
 
-  const navItems = [
+  const navItems = $derived([
     { href: '/home', icon: Flame, label: i18n.t.nav.home },
     { href: '/score', icon: Gauge, label: i18n.t.nav.score },
     { href: '/simulator', icon: Waveform, label: i18n.t.nav.simulator },
     { href: '/remittance', icon: PaperPlaneTilt, label: i18n.t.nav.remittance },
-  ];
+  ]);
 
   let currentPath = $derived(page.url.pathname);
 
   function handleLogout() {
     auth.logout();
-    goto('/login');
+    goto(resolve('/login'));
   }
 </script>
 
@@ -44,9 +45,9 @@
     </div>
 
     <nav class="flex flex-1 flex-col gap-1">
-      {#each navItems as item}
+      {#each navItems as item (item.href)}
         <a
-          href={item.href}
+          href={resolve(item.href as '/home' | '/score' | '/simulator' | '/remittance')}
           class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors
             {currentPath === item.href
               ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
@@ -62,6 +63,7 @@
 
     <div class="flex flex-col gap-1">
       <Button variant="ghost" size="sm" class="justify-start gap-3" onclick={toggleMode}>
+        <span class="sr-only">Toggle theme</span>
         <Sun size={18} class="dark:hidden" />
         <Moon size={18} class="hidden dark:block" />
         Theme
@@ -81,9 +83,9 @@
 </div>
 
 <nav class="fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t border-border bg-background p-2 lg:hidden">
-  {#each navItems as item}
+  {#each navItems as item (item.href)}
     <a
-      href={item.href}
+      href={resolve(item.href as '/home' | '/score' | '/simulator' | '/remittance')}
       class="flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors
         {currentPath === item.href
           ? 'text-primary font-medium'

@@ -3,7 +3,7 @@ services:
     build:
       context: ./src
       dockerfile: Dockerfile
-    container_name: satsscore_backend
+    container_name: vulk_backend
     restart: unless-stopped
     env_file:
       - .env
@@ -22,7 +22,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-    container_name: satsscore_frontend
+    container_name: vulk_frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-8080}:80"

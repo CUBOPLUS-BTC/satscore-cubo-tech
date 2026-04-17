@@ -1,19 +1,19 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://api.eclalune.com';
+const BASE = '/proxy';
 
 export const endpoints = {
   auth: {
-    challenge: `${BASE_URL}/auth/challenge`,
-    verify: `${BASE_URL}/auth/verify`,
-    me: `${BASE_URL}/auth/me`,
+    challenge: `${BASE}/auth/challenge`,
+    verify: `${BASE}/auth/verify`,
+    me: `${BASE}/auth/me`,
   },
-  price: `${BASE_URL}/price`,
-  score: (address: string) => `${BASE_URL}/score/${address}`,
+  price: `${BASE}/price`,
+  score: (address: string) => `${BASE}/score/${address}`,
   simulate: {
-    volatility: `${BASE_URL}/simulate/volatility`,
-    conversion: `${BASE_URL}/simulate/conversion`,
+    volatility: `${BASE}/simulate/volatility`,
+    conversion: `${BASE}/simulate/conversion`,
   },
   remittance: {
-    compare: `${BASE_URL}/remittance/compare`,
-    fees: `${BASE_URL}/remittance/fees`,
+    compare: `${BASE}/remittance/compare`,
+    fees: `${BASE}/remittance/fees`,
   },
 } as const;

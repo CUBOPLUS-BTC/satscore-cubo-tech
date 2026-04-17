@@ -37,4 +37,12 @@ export const en = {
   common: { loading: 'Loading...', error: 'Error', retry: 'Retry', cancel: 'Cancel', close: 'Close' },
 } as const;
 
-export type Translations = typeof en;
+type StringifyDeep<T> = {
+  [K in keyof T]: T[K] extends string
+    ? string
+    : T[K] extends object
+      ? StringifyDeep<T[K]>
+      : T[K];
+};
+
+export type Translations = StringifyDeep<typeof en>;

@@ -91,10 +91,10 @@ class Handler(BaseHTTPRequestHandler):
         print(f"[{self.address_string()}] {format % args}")
 
     def _root(self, params: dict, body: dict) -> tuple[dict, int]:
-        return {"message": "SatsScore API - Don't trust, verify"}, 200
+        return {"message": "Vulk API - Don't trust, verify"}, 200
 
     def _health(self, params: dict, body: dict) -> tuple[dict, int]:
-        return {"status": "ok", "service": "satsscore-backend"}, 200
+        return {"status": "ok", "service": "vulk-backend"}, 200
 
     def _price(self, params: dict, body: dict) -> tuple[dict, int]:
         try:
@@ -152,6 +152,6 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 if __name__ == "__main__":
     init_db()
     port = 8000
-    print(f"[SatsScore] Starting server on http://0.0.0.0:{port}")
+    print(f"[Vulk] Starting server on http://0.0.0.0:{port}")
     with ThreadedTCPServer(("", port), Handler) as server:
         server.serve_forever()

@@ -1,5 +1,5 @@
 # =============================================================================
-# SATSSCORE - .gitignore
+# VULK - .gitignore
 # Comprehensive ignore patterns for Python/FastAPI backend + Flutter frontend
 # =============================================================================
 
@@ -60,7 +60,7 @@ alembic/versions/__pycache__/
 *.db
 *.sqlite
 *.sqlite3
-satsscore.db
+vulk.db
 
 # -----------------------------------------------------------------------------
 # FLUTTER / FRONTEND
@@ -246,7 +246,7 @@ docs/
 # -----------------------------------------------------------------------------
 
 DEPLOYMENT.md
-README_SATSSCORE.md
+README_VULK.md
 README.stacocr
 
 # -----------------------------------------------------------------------------

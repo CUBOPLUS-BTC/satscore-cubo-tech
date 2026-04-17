@@ -26,7 +26,7 @@ def get_conn():
             _local.conn.autocommit = False
         else:
             url = settings.DATABASE_URL
-            path = url[len("sqlite:///"):] if url.startswith("sqlite:///") else "./satsscore.db"
+            path = url[len("sqlite:///"):] if url.startswith("sqlite:///") else "./vulk.db"
             _local.conn = sqlite3.connect(path, check_same_thread=False)
             _local.conn.row_factory = sqlite3.Row
     return _local.conn

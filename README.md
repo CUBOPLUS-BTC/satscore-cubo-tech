@@ -1,4 +1,4 @@
-# SatsScore — Bitcoin Financial Intelligence
+# Vulk
 
 > CUBO+ Hackathon 2026 | "Don't trust, verify"
 
@@ -13,18 +13,19 @@
 
 ## Tech Stack
 
-- **Backend**: FastAPI (Python 3.11+) — Dockerized
-- **Database**: PostgreSQL 16 — Dockerized
-- **Frontend**: Flutter Web — Deployed on Cloudflare Pages
+- **Backend**: FastAPI (Python 3.11+) Dockerized
+- **Database**: PostgreSQL 16 Dockerized
+- **Frontend**: SvelteKit 2.57 + Svelte 5 + Tailwind 4 Cloudflare Pages
 - **ORM**: SQLAlchemy + Alembic (migrations)
 - **Validation**: Pydantic
+- **Auth**: Nostr NIP-98
 
 ## Repository Structure
 
 ```
-/src         → Backend Python (FastAPI) + Dockerfile
-/frontend    → Flutter app (Cloudflare Pages)
-/strategy    → Business model & documentation (Non-Tech)
+/src                Backend Python (FastAPI) + Dockerfile
+/front-end-svelte   SvelteKit app (Cloudflare Pages)
+/strategy           Business model & documentation (Non-Tech)
 ```
 
 ## Quick Start
@@ -39,21 +40,20 @@ docker compose up --build
 - API: http://localhost:8000
 - Swagger Docs: http://localhost:8000/docs
 
-### Frontend (Flutter)
+### Frontend (SvelteKit)
 
 ```bash
-cd frontend
-flutter pub get
-flutter run -d chrome --dart-define=API_URL=http://localhost:8000
+cd front-end-svelte
+cp .env.example .env    # API_URL=http://localhost:8000
+bun install
+bun run dev
 ```
 
-### Deploy Frontend to Cloudflare Pages
+- App: http://localhost:5173
 
-```bash
-cd frontend
-flutter build web --release --dart-define=API_URL=https://your-api-domain.com
-# Output: frontend/build/web/ → deploy this folder
-```
+### Deploy
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for full Hetzner + Cloudflare Pages guide.
 
 ## Submission
 

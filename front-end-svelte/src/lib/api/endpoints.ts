@@ -5,15 +5,25 @@ export const endpoints = {
     challenge: `${BASE}/auth/challenge`,
     verify: `${BASE}/auth/verify`,
     me: `${BASE}/auth/me`,
+    lnurl: `${BASE}/auth/lnurl`,
+    lnurlStatus: (k1: string) => `${BASE}/auth/lnurl-status?k1=${k1}`,
+    devLogin: `${BASE}/auth/dev-login`,
   },
   price: `${BASE}/price`,
-  score: (address: string) => `${BASE}/score/${address}`,
-  simulate: {
-    volatility: `${BASE}/simulate/volatility`,
-    conversion: `${BASE}/simulate/conversion`,
-  },
   remittance: {
     compare: `${BASE}/remittance/compare`,
     fees: `${BASE}/remittance/fees`,
   },
+  savings: {
+    project: `${BASE}/savings/project`,
+    goal: `${BASE}/savings/goal`,
+    deposit: `${BASE}/savings/deposit`,
+    progress: `${BASE}/savings/progress`,
+  },
+  alerts: {
+    list: (since: number) => `${BASE}/alerts?since=${since}`,
+    status: `${BASE}/alerts/status`,
+    preferences: `${BASE}/alerts/preferences`,
+  },
+  achievements: `${BASE}/achievements`,
 } as const;

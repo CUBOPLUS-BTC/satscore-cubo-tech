@@ -9,9 +9,9 @@
   import { Separator } from '$lib/components/ui/separator';
   import { toggleMode } from 'mode-watcher';
   import Flame from 'phosphor-svelte/lib/Flame';
-  import Gauge from 'phosphor-svelte/lib/Gauge';
-  import Waveform from 'phosphor-svelte/lib/Waveform';
+  import Mountains from 'phosphor-svelte/lib/Mountains';
   import PaperPlaneTilt from 'phosphor-svelte/lib/PaperPlaneTilt';
+  import Vault from 'phosphor-svelte/lib/Vault';
   import Door from 'phosphor-svelte/lib/Door';
   import Moon from 'phosphor-svelte/lib/Moon';
   import Sun from 'phosphor-svelte/lib/Sun';
@@ -24,9 +24,8 @@
 
   const navItems = $derived([
     { href: '/home', icon: Flame, label: i18n.t.nav.home },
-    { href: '/score', icon: Gauge, label: i18n.t.nav.score },
-    { href: '/simulator', icon: Waveform, label: i18n.t.nav.simulator },
     { href: '/remittance', icon: PaperPlaneTilt, label: i18n.t.nav.remittance },
+    { href: '/savings', icon: Vault, label: i18n.t.nav.savings },
   ]);
 
   let currentPath = $derived(page.url.pathname);
@@ -38,20 +37,23 @@
 </script>
 
 <div class="flex h-screen">
-  <aside class="hidden lg:flex w-60 flex-col border-r border-sidebar-border bg-sidebar p-4">
-    <div class="mb-8 px-2">
-      <h1 class="font-heading text-xl font-bold text-sidebar-foreground">Magma</h1>
-      <p class="text-xs text-sidebar-foreground/60">Bitcoin Financial Intelligence</p>
+  <aside class="hidden lg:flex w-56 flex-col border-r border-sidebar-border bg-sidebar px-3 py-5">
+    <div class="mb-6 px-3">
+      <div class="flex items-center gap-2.5">
+        <Mountains class="size-7 text-primary" weight="bold" />
+        <h1 class="font-heading text-lg font-semibold text-sidebar-foreground tracking-tight">{i18n.t.app.name}</h1>
+      </div>
+      <p class="text-[11px] text-sidebar-foreground/50 mt-1 px-0.5">{i18n.t.app.tagline}</p>
     </div>
 
-    <nav class="flex flex-1 flex-col gap-1">
+    <nav class="flex flex-1 flex-col gap-0.5">
       {#each navItems as item (item.href)}
         <a
-          href={resolve(item.href as '/home' | '/score' | '/simulator' | '/remittance')}
-          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors
+          href={resolve(item.href as '/home' | '/remittance' | '/savings')}
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors
             {currentPath === item.href
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-              : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'}"
+              ? 'bg-primary/10 text-primary font-semibold'
+              : 'text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-foreground'}"
         >
           <item.icon size={20} weight={currentPath === item.href ? 'fill' : 'regular'} />
           {item.label}
@@ -59,36 +61,35 @@
       {/each}
     </nav>
 
-    <Separator class="my-2" />
+    <Separator class="my-3 opacity-50" />
 
-    <div class="flex flex-col gap-1">
-      <Button variant="ghost" size="sm" class="justify-start gap-3" onclick={toggleMode}>
-        <span class="sr-only">Toggle theme</span>
+    <div class="flex flex-col gap-0.5">
+      <Button variant="ghost" size="sm" class="justify-start gap-3 rounded-xl text-sidebar-foreground/55 hover:text-sidebar-foreground" onclick={toggleMode}>
         <Sun size={18} class="dark:hidden" />
         <Moon size={18} class="hidden dark:block" />
-        Theme
+        {i18n.t.nav.theme}
       </Button>
-      <Button variant="ghost" size="sm" class="justify-start gap-3 text-destructive" onclick={handleLogout}>
+      <Button variant="ghost" size="sm" class="justify-start gap-3 rounded-xl text-sidebar-foreground/55 hover:text-red-500" onclick={handleLogout}>
         <Door size={18} />
         {i18n.t.nav.logout}
       </Button>
     </div>
   </aside>
 
-  <main class="flex-1 overflow-y-auto pb-20 lg:pb-0">
-    <div class="mx-auto max-w-5xl p-4 lg:p-6">
+  <main class="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-background">
+    <div class="mx-auto max-w-5xl px-4 py-5 lg:px-8 lg:py-6">
       {@render children()}
     </div>
   </main>
 </div>
 
-<nav class="fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t border-border bg-background p-2 lg:hidden">
+<nav class="fixed inset-x-0 bottom-0 z-50 flex items-center justify-around border-t border-border bg-card/95 backdrop-blur-sm px-2 py-2.5 lg:hidden">
   {#each navItems as item (item.href)}
     <a
-      href={resolve(item.href as '/home' | '/score' | '/simulator' | '/remittance')}
-      class="flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors
+      href={resolve(item.href as '/home' | '/remittance' | '/savings')}
+      class="flex flex-col items-center gap-1 px-2 py-1 text-[11px] transition-colors
         {currentPath === item.href
-          ? 'text-primary font-medium'
+          ? 'text-primary font-semibold'
           : 'text-muted-foreground'}"
     >
       <item.icon size={22} weight={currentPath === item.href ? 'fill' : 'regular'} />

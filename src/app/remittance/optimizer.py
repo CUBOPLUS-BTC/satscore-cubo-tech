@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from ..services.coingecko_client import CoinGeckoClient
 from ..services.mempool_client import MempoolClient
 from .schemas import ChannelComparison, RemittanceResponse, SendTimeRecommendation

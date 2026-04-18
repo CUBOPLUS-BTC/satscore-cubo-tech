@@ -1,119 +1,177 @@
 import { browser } from '$app/environment';
-import { nip19, getPublicKey, finalizeEvent, generateSecretKey } from 'nostr-tools';
 import { endpoints } from '$lib/api/endpoints';
 
-const KEY_STORAGE = 'magma_nsec';
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
-
-function decodePrivateKey(input: string): Uint8Array {
-  const trimmed = input.trim();
-  if (trimmed.startsWith('nsec1')) {
-    const decoded = nip19.decode(trimmed);
-    if (decoded.type !== 'nsec') throw new Error('Invalid nsec key');
-    return decoded.data as Uint8Array;
-  }
-  if (/^[0-9a-f]{64}$/i.test(trimmed)) {
-    return hexToBytes(trimmed);
-  }
-  throw new Error('Invalid key format. Use nsec1... or 64-char hex.');
-}
+const TOKEN_KEY = 'magma_token';
+const PUBKEY_KEY = 'magma_pubkey';
 
 function createAuth() {
-  const stored = browser ? localStorage.getItem(KEY_STORAGE) : null;
+  const storedToken = browser ? localStorage.getItem(TOKEN_KEY) : null;
+  const storedPubkey = browser ? localStorage.getItem(PUBKEY_KEY) : null;
 
-  let secretKey = $state<Uint8Array | null>(stored ? hexToBytes(stored) : null);
-  let publicKey = $state<string | null>(stored ? getPublicKey(hexToBytes(stored)) : null);
+  let token = $state<string | null>(storedToken);
+  let publicKey = $state<string | null>(storedPubkey);
   let isLoading = $state(false);
   let error = $state<string | null>(null);
+  let lnurlData = $state<{ k1: string; lnurl: string } | null>(null);
+  let _pollInterval: ReturnType<typeof setInterval> | null = null;
 
   return {
-    get isAuthenticated() { return !!secretKey; },
+    get isAuthenticated() { return !!token; },
     get publicKey() { return publicKey; },
     get isLoading() { return isLoading; },
     get error() { return error; },
+    get lnurlData() { return lnurlData; },
 
     clearError() { error = null; },
 
-    async login(nsecOrHex: string) {
+    async startLogin(): Promise<string> {
       isLoading = true;
       error = null;
+      lnurlData = null;
 
       try {
-        const sk = decodePrivateKey(nsecOrHex);
-        const pk = getPublicKey(sk);
-
-        const challengeRes = await fetch(endpoints.auth.challenge, {
+        const res = await fetch(endpoints.auth.lnurl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pubkey: pk }),
         });
 
-        if (!challengeRes.ok) throw new Error('Failed to get challenge');
-        const { challenge } = await challengeRes.json();
+        if (!res.ok) throw new Error('Failed to create LNURL challenge');
+        const data = await res.json();
 
-        const event = finalizeEvent({
-          kind: 27235,
-          created_at: Math.floor(Date.now() / 1000),
-          tags: [
-            ['u', endpoints.auth.verify],
-            ['method', 'POST'],
-            ['challenge', challenge],
-          ],
-          content: '',
-        }, sk);
-
-        const verifyRes = await fetch(endpoints.auth.verify, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ signed_event: event, challenge }),
-        });
-
-        if (!verifyRes.ok) throw new Error('Authentication failed');
-
-        const skHex = Array.from(sk).map(b => b.toString(16).padStart(2, '0')).join('');
-        secretKey = sk;
-        publicKey = pk;
-        if (browser) localStorage.setItem(KEY_STORAGE, skHex);
-
+        lnurlData = { k1: data.k1, lnurl: data.lnurl };
+        return data.k1;
       } catch (e) {
-        error = e instanceof Error ? e.message : 'Authentication failed';
+        error = e instanceof Error ? e.message : 'Login failed';
         throw e;
       } finally {
         isLoading = false;
       }
     },
 
-    generateKeys() {
-      const sk = generateSecretKey();
-      const pk = getPublicKey(sk);
-      const nsec = nip19.nsecEncode(sk);
-      const npub = nip19.npubEncode(pk);
-      return { nsec, npub };
+    startPolling(k1: string, onSuccess: () => void): void {
+      this.stopPolling();
+      _pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(endpoints.auth.lnurlStatus(k1));
+          if (!res.ok) return;
+          const data = await res.json();
+
+          if (data.status === 'ok' && data.token && data.pubkey) {
+            token = data.token;
+            publicKey = data.pubkey;
+            if (browser) {
+              localStorage.setItem(TOKEN_KEY, data.token);
+              localStorage.setItem(PUBKEY_KEY, data.pubkey);
+            }
+            this.stopPolling();
+            lnurlData = null;
+            onSuccess();
+          } else if (data.status === 'expired' || data.status === 'error') {
+            error = 'Session expired. Try again.';
+            this.stopPolling();
+            lnurlData = null;
+          }
+        } catch {
+          // network error, will retry
+        }
+      }, 2000);
+    },
+
+    async loginWithNostr(): Promise<void> {
+      isLoading = true;
+      error = null;
+
+      try {
+        const nostr = (window as any).nostr;
+        if (!nostr) throw new Error('No Nostr extension found. Install nos2x or Alby.');
+
+        const pubkeyHex: string = await nostr.getPublicKey();
+
+        const challengeRes = await fetch(endpoints.auth.challenge, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pubkey: pubkeyHex }),
+        });
+        if (!challengeRes.ok) throw new Error('Failed to get challenge');
+        const { challenge } = await challengeRes.json();
+
+        const event = await nostr.signEvent({
+          kind: 27235,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [['u', window.location.origin], ['method', 'GET']],
+          content: challenge,
+        });
+
+        const verifyRes = await fetch(endpoints.auth.verify, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signed_event: event, challenge }),
+        });
+        if (!verifyRes.ok) throw new Error('Signature verification failed');
+        const data = await verifyRes.json();
+
+        token = data.token;
+        publicKey = data.pubkey;
+        if (browser) {
+          localStorage.setItem(TOKEN_KEY, data.token);
+          localStorage.setItem(PUBKEY_KEY, data.pubkey);
+        }
+      } catch (e) {
+        error = e instanceof Error ? e.message : 'Nostr login failed';
+        throw e;
+      } finally {
+        isLoading = false;
+      }
+    },
+
+    async devLogin(): Promise<void> {
+      isLoading = true;
+      error = null;
+
+      try {
+        const res = await fetch(endpoints.auth.devLogin, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        if (!res.ok) throw new Error('Dev login disabled');
+        const data = await res.json();
+
+        token = data.token;
+        publicKey = data.pubkey;
+        if (browser) {
+          localStorage.setItem(TOKEN_KEY, data.token);
+          localStorage.setItem(PUBKEY_KEY, data.pubkey);
+        }
+      } catch (e) {
+        error = e instanceof Error ? e.message : 'Dev login failed';
+        throw e;
+      } finally {
+        isLoading = false;
+      }
+    },
+
+    stopPolling(): void {
+      if (_pollInterval) {
+        clearInterval(_pollInterval);
+        _pollInterval = null;
+      }
     },
 
     logout() {
-      secretKey = null;
+      this.stopPolling();
+      token = null;
       publicKey = null;
-      if (browser) localStorage.removeItem(KEY_STORAGE);
+      lnurlData = null;
+      if (browser) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(PUBKEY_KEY);
+      }
     },
 
     getAuthHeader(): string | null {
-      if (!secretKey || !publicKey) return null;
-      const sk = secretKey;
-      const event = finalizeEvent({
-        kind: 27235,
-        created_at: Math.floor(Date.now() / 1000),
-        tags: [['u', endpoints.auth.me], ['method', 'GET']],
-        content: '',
-      }, sk);
-      return `Nostr ${btoa(JSON.stringify(event))}`;
+      if (!token) return null;
+      return `Bearer ${token}`;
     },
   };
 }

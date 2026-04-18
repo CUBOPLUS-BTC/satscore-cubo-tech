@@ -25,7 +25,7 @@ class CoinGeckoClient:
                 return data
 
         req = urllib.request.Request(url, headers=self._headers())
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=8) as response:
             data = json.loads(response.read().decode())
 
         self._cache[key] = (data, now + ttl)

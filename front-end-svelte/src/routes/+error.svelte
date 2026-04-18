@@ -2,6 +2,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { i18n } from '$lib/i18n/index.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Card } from '$lib/components/ui/card';
   import WarningCircle from 'phosphor-svelte/lib/WarningCircle';
@@ -18,16 +19,16 @@
         {page.status}
       </h1>
       <p class="text-muted-foreground">
-        {page.error?.message ?? 'Something went wrong'}
+        {page.error?.message ?? i18n.t.error.somethingWentWrong}
       </p>
     </div>
 
     <div class="flex gap-3 justify-center">
       <Button variant="outline" onclick={() => history.back()}>
-        Go Back
+        {i18n.t.error.goBack}
       </Button>
       <Button onclick={() => goto(resolve('/home'))}>
-        Home
+        {i18n.t.error.home}
       </Button>
     </div>
   </Card>

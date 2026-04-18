@@ -1,31 +1,57 @@
 import json
 import re
 import socketserver
+import urllib.parse
 from http.server import BaseHTTPRequestHandler
 
 from app.database import init_db
 from app.config import settings
-from app.scoring.engine import ScoringEngine
 from app.services.price_aggregator import PriceAggregator
-from app.auth.routes import handle_challenge, handle_verify, handle_me
-from app.simulator.routes import handle_volatility, handle_conversion
+from app.auth.routes import (
+    handle_challenge,
+    handle_verify,
+    handle_me,
+    handle_lnurl_create,
+    handle_lnurl_callback,
+    handle_lnurl_status,
+    handle_dev_login,
+)
 from app.remittance.routes import handle_compare, handle_fees
+from app.savings.routes import (
+    handle_projection,
+    handle_create_goal,
+    handle_record_deposit,
+    handle_progress as handle_savings_progress,
+)
+from app.alerts.monitor import AlertMonitor
+from app.alerts.routes import handle_alerts, handle_alert_status
+from app.gamification.routes import handle_achievements
+from app.gamification.achievements import AchievementEngine
 
-_engine = ScoringEngine()
+_achievement_engine = AchievementEngine()
 _price_aggregator = PriceAggregator(settings.COINGECKO_API_KEY)
+_monitor = AlertMonitor(_price_aggregator)
 
 ROUTES = [
     ("GET", re.compile(r"^/$"), "_root"),
     ("GET", re.compile(r"^/health$"), "_health"),
     ("GET", re.compile(r"^/price$"), "_price"),
-    ("GET", re.compile(r"^/score/(?P<address>[^/]+)$"), "_score"),
     ("POST", re.compile(r"^/auth/challenge$"), "_auth_challenge"),
     ("POST", re.compile(r"^/auth/verify$"), "_auth_verify"),
     ("GET", re.compile(r"^/auth/me$"), "_auth_me"),
-    ("POST", re.compile(r"^/simulate/volatility$"), "_sim_volatility"),
-    ("POST", re.compile(r"^/simulate/conversion$"), "_sim_conversion"),
+    ("POST", re.compile(r"^/auth/lnurl$"), "_auth_lnurl_create"),
+    ("GET", re.compile(r"^/auth/lnurl-callback$"), "_auth_lnurl_callback"),
+    ("GET", re.compile(r"^/auth/lnurl-status$"), "_auth_lnurl_status"),
+    ("POST", re.compile(r"^/auth/dev-login$"), "_auth_dev_login"),
     ("POST", re.compile(r"^/remittance/compare$"), "_remittance_compare"),
     ("GET", re.compile(r"^/remittance/fees$"), "_remittance_fees"),
+    ("POST", re.compile(r"^/savings/project$"), "_savings_project"),
+    ("POST", re.compile(r"^/savings/goal$"), "_savings_goal"),
+    ("POST", re.compile(r"^/savings/deposit$"), "_savings_deposit"),
+    ("GET", re.compile(r"^/savings/progress$"), "_savings_progress"),
+    ("GET", re.compile(r"^/achievements$"), "_achievements"),
+    ("GET", re.compile(r"^/alerts$"), "_alerts"),
+    ("GET", re.compile(r"^/alerts/status$"), "_alert_status"),
 ]
 
 
@@ -63,7 +89,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
     def _dispatch(self) -> None:
-        path = self.path.split("?")[0]
+        raw_path = self.path
+        path = raw_path.split("?")[0]
+        query_string = raw_path.split("?", 1)[1] if "?" in raw_path else ""
+        query = dict(urllib.parse.parse_qsl(query_string))
+
         for method, pattern, handler_name in ROUTES:
             if self.command != method:
                 continue
@@ -71,7 +101,7 @@ class Handler(BaseHTTPRequestHandler):
             if m:
                 handler_fn = getattr(self, handler_name)
                 body = self._read_body()
-                data, status = handler_fn(m.groupdict(), body)
+                data, status = handler_fn(m.groupdict(), body, query)
                 self._send_json(data, status)
                 return
         self._send_json({"detail": "Not found"}, 404)
@@ -90,13 +120,13 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args) -> None:
         print(f"[{self.address_string()}] {format % args}")
 
-    def _root(self, params: dict, body: dict) -> tuple[dict, int]:
-        return {"message": "Vulk API - Don't trust, verify"}, 200
+    def _root(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        return {"message": "Magma API - Don't trust, verify"}, 200
 
-    def _health(self, params: dict, body: dict) -> tuple[dict, int]:
+    def _health(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         return {"status": "ok", "service": "vulk-backend"}, 200
 
-    def _price(self, params: dict, body: dict) -> tuple[dict, int]:
+    def _price(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         try:
             return _price_aggregator.get_verified_price(), 200
         except Exception as e:
@@ -107,41 +137,102 @@ class Handler(BaseHTTPRequestHandler):
                 "has_warning": True,
             }, 200
 
-    def _score(self, params: dict, body: dict) -> tuple[dict, int]:
-        address = params.get("address", "")
-        try:
-            result = _engine.calculate_score(address)
-            return {
-                "total_score": result.total_score,
-                "rank": result.rank,
-                "address": result.address,
-                "breakdown": result.breakdown,
-                "recommendations": result.recommendations,
-            }, 200
-        except Exception as e:
-            return {"detail": str(e)}, 500
-
-    def _auth_challenge(self, params: dict, body: dict) -> tuple[dict, int]:
+    def _auth_challenge(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
         return handle_challenge(body)
 
-    def _auth_verify(self, params: dict, body: dict) -> tuple[dict, int]:
+    def _auth_verify(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         return handle_verify(body)
 
-    def _auth_me(self, params: dict, body: dict) -> tuple[dict, int]:
+    def _auth_me(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         auth = self.headers.get("Authorization", "")
         return handle_me(auth)
 
-    def _sim_volatility(self, params: dict, body: dict) -> tuple[dict, int]:
-        return handle_volatility(body)
+    def _remittance_compare(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        result = handle_compare(body)
+        auth_header = self.headers.get("Authorization", "")
+        me_data, me_status = handle_me(auth_header)
+        if me_status == 200:
+            _achievement_engine.check_and_award(me_data["pubkey"], "remittance", {})
+        return result
 
-    def _sim_conversion(self, params: dict, body: dict) -> tuple[dict, int]:
-        return handle_conversion(body)
-
-    def _remittance_compare(self, params: dict, body: dict) -> tuple[dict, int]:
-        return handle_compare(body)
-
-    def _remittance_fees(self, params: dict, body: dict) -> tuple[dict, int]:
+    def _remittance_fees(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
         return handle_fees(body)
+
+    def _auth_lnurl_create(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_lnurl_create(body)
+
+    def _auth_lnurl_callback(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_lnurl_callback(query)
+
+    def _auth_lnurl_status(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_lnurl_status(query)
+
+    def _auth_dev_login(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_dev_login(body)
+
+    def _savings_project(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_projection(body)
+
+    def _savings_goal(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        auth_header = self.headers.get("Authorization", "")
+        me_data, status = handle_me(auth_header)
+        if status != 200:
+            return {"detail": "Authentication required"}, 401
+        return handle_create_goal(body, me_data["pubkey"])
+
+    def _savings_deposit(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        auth_header = self.headers.get("Authorization", "")
+        me_data, status = handle_me(auth_header)
+        if status != 200:
+            return {"detail": "Authentication required"}, 401
+        result = handle_record_deposit(body, me_data["pubkey"])
+        if result[1] == 200:
+            progress = handle_savings_progress(me_data["pubkey"])
+            if progress[1] == 200:
+                _achievement_engine.check_and_award(
+                    me_data["pubkey"], "deposit", progress[0]
+                )
+        return result
+
+    def _savings_progress(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        auth_header = self.headers.get("Authorization", "")
+        me_data, status = handle_me(auth_header)
+        if status != 200:
+            return {"detail": "Authentication required"}, 401
+        return handle_savings_progress(me_data["pubkey"])
+
+    def _achievements(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        auth_header = self.headers.get("Authorization", "")
+        me_data, status = handle_me(auth_header)
+        if status != 200:
+            return {"detail": "Authentication required"}, 401
+        return handle_achievements(me_data["pubkey"])
+
+    def _alerts(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        return handle_alerts(_monitor, query)
+
+    def _alert_status(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        return handle_alert_status(_monitor)
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -151,7 +242,8 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 if __name__ == "__main__":
     init_db()
+    _monitor.start()
     port = 8000
-    print(f"[Vulk] Starting server on http://0.0.0.0:{port}")
+    print(f"[Magma] Starting server on http://0.0.0.0:{port}")
     with ThreadedTCPServer(("", port), Handler) as server:
         server.serve_forever()

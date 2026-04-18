@@ -7,14 +7,57 @@ _local = threading.local()
 _CREATE_USERS = """
     CREATE TABLE IF NOT EXISTS users (
         pubkey TEXT PRIMARY KEY,
+        auth_method TEXT NOT NULL DEFAULT 'lnurl',
         created_at INTEGER NOT NULL
+    )
+"""
+
+_CREATE_USER_PREFERENCES = """
+    CREATE TABLE IF NOT EXISTS user_preferences (
+        pubkey TEXT PRIMARY KEY,
+        fee_alert_low INTEGER NOT NULL DEFAULT 5,
+        fee_alert_high INTEGER NOT NULL DEFAULT 50,
+        price_alerts TEXT NOT NULL DEFAULT '[]',
+        alerts_enabled INTEGER NOT NULL DEFAULT 1,
+        updated_at INTEGER NOT NULL
+    )
+"""
+
+_CREATE_SAVINGS_GOALS = """
+    CREATE TABLE IF NOT EXISTS savings_goals (
+        pubkey TEXT PRIMARY KEY,
+        monthly_target_usd REAL NOT NULL,
+        target_years INTEGER NOT NULL DEFAULT 10,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+    )
+"""
+
+_CREATE_SAVINGS_DEPOSITS = """
+    CREATE TABLE IF NOT EXISTS savings_deposits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pubkey TEXT NOT NULL,
+        amount_usd REAL NOT NULL,
+        btc_price REAL NOT NULL,
+        btc_amount REAL NOT NULL,
+        created_at INTEGER NOT NULL
+    )
+"""
+
+_CREATE_USER_ACHIEVEMENTS = """
+    CREATE TABLE IF NOT EXISTS user_achievements (
+        pubkey TEXT NOT NULL,
+        achievement_id TEXT NOT NULL,
+        awarded_at INTEGER NOT NULL,
+        PRIMARY KEY (pubkey, achievement_id)
     )
 """
 
 
 def _is_postgres() -> bool:
-    return settings.DATABASE_URL.startswith("postgresql://") or \
-           settings.DATABASE_URL.startswith("postgres://")
+    return settings.DATABASE_URL.startswith(
+        "postgresql://"
+    ) or settings.DATABASE_URL.startswith("postgres://")
 
 
 def get_conn():
@@ -22,17 +65,38 @@ def get_conn():
         if _is_postgres():
             import psycopg2
             import psycopg2.extras
+
             _local.conn = psycopg2.connect(settings.DATABASE_URL)
             _local.conn.autocommit = False
         else:
             url = settings.DATABASE_URL
-            path = url[len("sqlite:///"):] if url.startswith("sqlite:///") else "./vulk.db"
+            path = (
+                url[len("sqlite:///") :]
+                if url.startswith("sqlite:///")
+                else "./vulk.db"
+            )
             _local.conn = sqlite3.connect(path, check_same_thread=False)
             _local.conn.row_factory = sqlite3.Row
     return _local.conn
 
 
+def _migrate_users_table(conn) -> None:
+    """Add auth_method column if upgrading from old schema."""
+    try:
+        conn.execute("SELECT auth_method FROM users LIMIT 1")
+    except Exception:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN auth_method TEXT NOT NULL DEFAULT 'lnurl'"
+        )
+        conn.commit()
+
+
 def init_db() -> None:
     conn = get_conn()
     conn.execute(_CREATE_USERS)
+    conn.execute(_CREATE_USER_PREFERENCES)
+    conn.execute(_CREATE_SAVINGS_GOALS)
+    conn.execute(_CREATE_SAVINGS_DEPOSITS)
+    conn.execute(_CREATE_USER_ACHIEVEMENTS)
     conn.commit()
+    _migrate_users_table(conn)

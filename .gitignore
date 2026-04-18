@@ -248,6 +248,10 @@ docs/
 DEPLOYMENT.md
 README_VULK.md
 README.stacocr
+AUDIT-FIXES.md
+IMPLEMENTATION-GUIDE.md
+front-end-svelte/STYLE-GUIDE.md
+front-end-svelte/PLAN-REFACTOR-VULK.md
 
 # -----------------------------------------------------------------------------
 # KILO / AGENT TOOLS

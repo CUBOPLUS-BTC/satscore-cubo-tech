@@ -3,12 +3,6 @@ from typing import Optional
 
 
 @dataclass
-class RemittanceRequest:
-    amount_usd: float
-    frequency: str = "monthly"
-
-
-@dataclass
 class ChannelComparison:
     name: str
     fee_percent: float

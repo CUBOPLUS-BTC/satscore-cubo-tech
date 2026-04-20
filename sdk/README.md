@@ -85,8 +85,61 @@ client = MagmaClient(
 )
 ```
 
+## Async client
+
+`AsyncMagmaClient` mirrors the sync API and is safe to call from
+`asyncio`, FastAPI handlers, etc. Under the hood it delegates to the
+sync transport via `asyncio.to_thread`, so no third-party async HTTP
+dependency is required.
+
+```python
+import asyncio
+from magma_sdk import AsyncMagmaClient
+
+async def main():
+    async with AsyncMagmaClient("https://api.magma.example") as client:
+        quote = await client.price.get()
+        proj = await client.savings.project(monthly_usd=100, years=10)
+        rem = await client.remittance.compare(amount_usd=500)
+        print(quote.price_usd, proj.total_invested, rem.best_channel)
+
+asyncio.run(main())
+```
+
+If you need true non-blocking throughput, wrap `httpx.AsyncClient` in
+a custom transport and pass it in via `MagmaClient(transport=...)`.
+
+## Retry-After
+
+The transport honours an upstream `Retry-After` header (both numeric
+seconds and HTTP-date forms) on any retriable status
+(`408/425/429/5xx`). Values are clamped to 60s so a misbehaving server
+can't stall the client indefinitely. Disable with
+`MagmaClient(..., respect_retry_after=False)` via a custom
+`TransportConfig` if you prefer fixed exponential backoff.
+
+## Command-line interface
+
+The SDK ships with a `magma` console script (also invokable as
+`python -m magma_sdk`):
+
+```bash
+export MAGMA_BASE_URL=https://api.magma.example
+magma price --pretty
+magma savings-project --monthly-usd 100 --years 10
+magma remittance --amount-usd 500 --frequency monthly | jq .annual_savings
+magma pension --monthly-usd 150 --years 20
+magma fees
+magma alerts --limit 5
+```
+
+Authenticated commands (`savings-progress`) use `MAGMA_TOKEN` or
+`--token`. Exit codes: `0` success, `1` usage/validation, `2` API
+error, `3` transport error.
+
 ## Status
 
-`v0.1`: stable covering public endpoints and session management. Pagination,
-async support, and auto-refresh for expired tokens are tracked for a future
-release.
+`v0.2`: covers public endpoints, session management, sync + async
+clients, `Retry-After`, and a stdlib-only CLI. Pagination helpers and
+a native async transport (for truly non-blocking I/O) are tracked for
+a future release.

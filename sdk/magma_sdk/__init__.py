@@ -1,5 +1,6 @@
 """Magma SDK — Python client for the SatScore / Magma backend."""
 
+from .async_client import AsyncMagmaClient
 from .client import MagmaClient
 from .exceptions import (
     APIError,
@@ -26,10 +27,11 @@ from .models import (
 from .resources.auth import AuthSession, Challenge, LnurlChallenge, LnurlStatus
 
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "MagmaClient",
+    "AsyncMagmaClient",
     # Errors
     "MagmaError",
     "TransportError",

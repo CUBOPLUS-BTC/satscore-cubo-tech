@@ -218,3 +218,56 @@ class Alert:
             ),
             raw=data,
         )
+
+
+@dataclass(frozen=True)
+class LiquidNetworkStatus:
+    available: bool
+    block_height: Optional[int]
+    recommended_fee_sat_vb: float
+    fee_estimates: dict
+    network: str
+    raw: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LiquidNetworkStatus":
+        height = data.get("block_height")
+        return cls(
+            available=bool(data.get("available", False)),
+            block_height=int(height) if isinstance(height, (int, float)) else None,
+            recommended_fee_sat_vb=float(data.get("recommended_fee_sat_vb", 0.0)),
+            fee_estimates=dict(data.get("fee_estimates", {}))
+            if isinstance(data.get("fee_estimates"), dict)
+            else {},
+            network=str(data.get("network", "liquid")),
+            raw=data,
+        )
+
+
+@dataclass(frozen=True)
+class LiquidAsset:
+    asset_id: Optional[str]
+    name: Optional[str]
+    ticker: Optional[str]
+    precision: Optional[int]
+    issued_amount: Optional[int]
+    burned_amount: Optional[int]
+    raw: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LiquidAsset":
+        def _int(key: str) -> Optional[int]:
+            value = data.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                return int(value)
+            return None
+
+        return cls(
+            asset_id=str(data["asset_id"]) if isinstance(data.get("asset_id"), str) else None,
+            name=str(data["name"]) if isinstance(data.get("name"), str) else None,
+            ticker=str(data["ticker"]) if isinstance(data.get("ticker"), str) else None,
+            precision=_int("precision"),
+            issued_amount=_int("issued_amount"),
+            burned_amount=_int("burned_amount"),
+            raw=data,
+        )

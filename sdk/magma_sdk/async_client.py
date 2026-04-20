@@ -20,6 +20,7 @@ from .async_resources import (
     AsyncAlertsResource,
     AsyncAuthResource,
     AsyncGamificationResource,
+    AsyncLiquidResource,
     AsyncNetworkResource,
     AsyncPensionResource,
     AsyncPriceResource,
@@ -62,6 +63,7 @@ class AsyncMagmaClient:
         self.remittance = AsyncRemittanceResource(self)
         self.alerts = AsyncAlertsResource(self)
         self.gamification = AsyncGamificationResource(self)
+        self.liquid = AsyncLiquidResource(self)
         self.network = AsyncNetworkResource(self)
         self.price = AsyncPriceResource(self)
 

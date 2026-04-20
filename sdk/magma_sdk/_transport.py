@@ -23,7 +23,7 @@ from typing import Any, Callable, Mapping, Optional
 from .exceptions import TransportError, api_error_for
 
 
-DEFAULT_USER_AGENT = "magma-sdk-python/0.3.0"
+DEFAULT_USER_AGENT = "magma-sdk-python/0.4.0"
 _RETRIABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
 # Upper bound enforced on any Retry-After value (seconds) so a
 # misbehaving server can't stall the client indefinitely.

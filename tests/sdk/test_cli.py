@@ -99,6 +99,20 @@ def fake_client():
             def n_status():
                 return self.network._record("status")
 
+            self.liquid = FakeResource()
+
+            def l_status():
+                return self.liquid._record("status")
+
+            def l_lbtc():
+                return self.liquid._record("lbtc")
+
+            def l_usdt():
+                return self.liquid._record("usdt")
+
+            def l_asset(asset_id):
+                return self.liquid._record("asset", asset_id=asset_id)
+
             self.price.get = price_get
             self.savings.project = s_project
             self.savings.progress = s_progress
@@ -108,6 +122,10 @@ def fake_client():
             self.alerts.list = a_list
             self.alerts.status = a_status
             self.network.status = n_status
+            self.liquid.status = l_status
+            self.liquid.lbtc = l_lbtc
+            self.liquid.usdt = l_usdt
+            self.liquid.asset = l_asset
 
     with patch.object(cli, "MagmaClient", FakeClient):
         yield FakeClient
@@ -195,6 +213,25 @@ class TestCliCommands:
     def test_env_var_base_url(self, fake_client, monkeypatch):
         monkeypatch.setenv("MAGMA_BASE_URL", "https://env.test")
         code, out, _ = _run(["price"])
+        assert code == 0
+
+    def test_liquid_status(self, fake_client):
+        code, out, _ = _run(["--base-url", "https://api.test", "liquid-status"])
+        assert code == 0
+
+    def test_liquid_lbtc(self, fake_client):
+        code, out, _ = _run(["--base-url", "https://api.test", "liquid-lbtc"])
+        assert code == 0
+
+    def test_liquid_asset_requires_id(self, fake_client):
+        code, out, _ = _run(["--base-url", "https://api.test", "liquid-asset"])
+        assert code != 0
+
+    def test_liquid_asset_with_id(self, fake_client):
+        asset_id = "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d"
+        code, out, _ = _run(
+            ["--base-url", "https://api.test", "liquid-asset", asset_id]
+        )
         assert code == 0
 
 

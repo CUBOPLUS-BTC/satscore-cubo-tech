@@ -245,10 +245,44 @@ Other helpers: `mock.enqueue(...)` for a FIFO of responses,
 `mock.enqueue_error(exc)` to simulate failures, `mock.set_default(...)`
 as a catch-all, `mock.find_all(...)` / `mock.reset()` for assertions.
 
+## Liquid Network
+
+Tap into the Liquid sidechain (Blockstream) for faster settlement and
+confidential-amount Bitcoin-denominated transfers — especially useful
+for remittance amounts above ~$1k where Lightning routing gets
+awkward.
+
+```python
+status = client.liquid.status()
+print(status.block_height, status.recommended_fee_sat_vb)
+
+lbtc = client.liquid.lbtc()
+print(lbtc.ticker, lbtc.issued_amount)
+
+# Arbitrary asset by hex id
+info = client.liquid.asset("6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d")
+
+# Async works too
+await async_client.liquid.status()
+```
+
+CLI:
+
+```bash
+magma liquid-status
+magma liquid-lbtc --pretty
+magma liquid-usdt
+magma liquid-asset 6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d
+```
+
+`client.remittance.compare(...)` now returns a live Liquid channel
+alongside Lightning, priced from real Liquid fee estimates.
+
 ## Status
 
-`v0.3`: webhooks, idempotency keys, request IDs, retry hook, alert
-iterators (sync + async), health/readiness, consumer testing helpers,
-sync + async clients, `Retry-After`, and a stdlib-only CLI. A native
-async transport (for truly non-blocking I/O) and server-driven
-pagination are tracked for a future release.
+`v0.4`: Liquid support (status, fee estimates, asset lookups, L-BTC
+channel in remittance comparison), webhooks, idempotency keys, request
+IDs, retry hook, alert iterators (sync + async), health/readiness,
+consumer testing helpers, sync + async clients, `Retry-After`, and a
+stdlib-only CLI. A native async transport and server-driven pagination
+are tracked for a future release.

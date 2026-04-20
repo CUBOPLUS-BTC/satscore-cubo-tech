@@ -115,6 +115,12 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("alerts-status", help="Alert monitor status")
     sub.add_parser("network", help="Bitcoin network status")
 
+    sub.add_parser("liquid-status", help="Liquid Network tip + fees")
+    sub.add_parser("liquid-lbtc", help="L-BTC asset info")
+    sub.add_parser("liquid-usdt", help="USDt on Liquid asset info")
+    la = sub.add_parser("liquid-asset", help="Arbitrary Liquid asset lookup")
+    la.add_argument("asset_id")
+
     return parser
 
 
@@ -158,6 +164,14 @@ def _dispatch(client: MagmaClient, args: argparse.Namespace) -> Any:
         return client.alerts.status()
     if cmd == "network":
         return client.network.status()
+    if cmd == "liquid-status":
+        return client.liquid.status()
+    if cmd == "liquid-lbtc":
+        return client.liquid.lbtc()
+    if cmd == "liquid-usdt":
+        return client.liquid.usdt()
+    if cmd == "liquid-asset":
+        return client.liquid.asset(args.asset_id)
     raise MagmaError(f"Unknown command: {cmd}")
 
 

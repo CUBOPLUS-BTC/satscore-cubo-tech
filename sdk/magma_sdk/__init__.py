@@ -21,6 +21,8 @@ from .exceptions import (
 )
 from .models import (
     Alert,
+    LiquidAsset,
+    LiquidNetworkStatus,
     PensionProjection,
     PriceQuote,
     ProjectionScenario,
@@ -42,7 +44,7 @@ from .webhooks import (
 )
 
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "MagmaClient",
@@ -64,6 +66,8 @@ __all__ = [
     "ServerError",
     # Models
     "Alert",
+    "LiquidAsset",
+    "LiquidNetworkStatus",
     "PensionProjection",
     "PriceQuote",
     "ProjectionScenario",

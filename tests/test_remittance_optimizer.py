@@ -38,10 +38,15 @@ def optimizer():
                 "estimated_low_fee_sat_vb": 10,
             }
 
+    class _Liquid:
+        def recommended_fee_sat_vb(self, *, target_blocks=2):
+            return 0.1
+
     opt.coingecko = _CG()
     opt.mempool = _MP()
     opt.wise = _Wise()
     opt.fee_tracker = _FT()
+    opt.liquid = _Liquid()
     return opt
 
 
@@ -59,11 +64,33 @@ class TestCompare:
         assert ln.is_recommended is True
         assert ln.is_live is True
 
-    def test_worst_excludes_lightning(self, optimizer):
+    def test_worst_excludes_bitcoin_native(self, optimizer):
         result = optimizer.compare(100)
-        # Worst is the reference with the highest fee % (Western Union @ 7.5%).
+        # Worst is the reference with the highest fee % (Western Union @ 7.5%),
+        # and neither Lightning nor Liquid may be picked as "worst".
         assert result.worst_channel_name == "Western Union"
         assert result.savings_vs_worst > 0
+
+    def test_liquid_channel_present_and_cheap(self, optimizer):
+        result = optimizer.compare(100)
+        names = [c.name for c in result.channels]
+        assert "Liquid Network" in names
+        liquid = next(c for c in result.channels if c.name == "Liquid Network")
+        # 0.1 sat/vB * 1000 vB = 100 sats. At $50k BTC = $0.05. Cheap.
+        assert liquid.fee_usd < 0.50
+        assert liquid.is_live is True
+        assert liquid.estimated_time == "~2 minutes"
+
+    def test_liquid_fee_scales_with_fee_rate(self, optimizer):
+        class _FatLiquid:
+            def recommended_fee_sat_vb(self, *, target_blocks=2):
+                return 5.0
+
+        optimizer.liquid = _FatLiquid()
+        result = optimizer.compare(100)
+        liquid = next(c for c in result.channels if c.name == "Liquid Network")
+        # 5 sat/vB * 1000 vB = 5000 sats = $2.50 at $50k BTC.
+        assert 2.0 < liquid.fee_usd < 3.0
 
     def test_annual_savings_frequency_multiplier(self, optimizer):
         monthly = optimizer.compare(100, "monthly").annual_savings

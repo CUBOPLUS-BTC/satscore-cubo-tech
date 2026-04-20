@@ -10,6 +10,7 @@ from .resources import (
     AlertsResource,
     AuthResource,
     GamificationResource,
+    LiquidResource,
     NetworkResource,
     PensionResource,
     PriceResource,
@@ -70,6 +71,7 @@ class MagmaClient:
         self.remittance = RemittanceResource(self)
         self.alerts = AlertsResource(self)
         self.gamification = GamificationResource(self)
+        self.liquid = LiquidResource(self)
         self.network = NetworkResource(self)
         self.price = PriceResource(self)
 

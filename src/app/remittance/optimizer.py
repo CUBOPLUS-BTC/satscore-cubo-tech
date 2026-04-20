@@ -1,9 +1,17 @@
 from concurrent.futures import ThreadPoolExecutor
 from ..services.coingecko_client import CoinGeckoClient
+from ..services.liquid_client import LiquidClient
 from ..services.mempool_client import MempoolClient
 from ..services.wise_client import WiseClient
 from .schemas import ChannelComparison, RemittanceResponse, SendTimeRecommendation
 from .fees import FeeTracker
+
+
+# A standard L-BTC transfer is noticeably larger than a BTC tx because of
+# Liquid's confidential amounts + asset blinding. 1 kvB is a conservative
+# estimate for a single-input, single-output transaction.
+LIQUID_TX_VBYTES = 1000
+# Liquid's peg guarantees 1 L-BTC ≈ 1 BTC, so we price L-BTC fees in BTC terms.
 
 
 FREQUENCY_MULTIPLIERS = {
@@ -34,15 +42,19 @@ class RemittanceOptimizer:
         self.mempool = MempoolClient()
         self.fee_tracker = FeeTracker()
         self.wise = WiseClient()
+        self.liquid = LiquidClient()
 
     def compare(
         self, amount_usd: float, frequency: str = "monthly"
     ) -> RemittanceResponse:
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        with ThreadPoolExecutor(max_workers=5) as executor:
             f_price = executor.submit(self.coingecko.get_price)
             f_fees = executor.submit(self.mempool.get_recommended_fees)
             f_time = executor.submit(self.fee_tracker.get_best_send_time)
             f_wise = executor.submit(self.wise.get_comparison, amount_usd)
+            f_liquid_fee = executor.submit(
+                self.liquid.recommended_fee_sat_vb
+            )
 
             try:
                 btc_price = f_price.result()
@@ -60,6 +72,10 @@ class RemittanceOptimizer:
                 wise_data = f_wise.result()
             except Exception:
                 wise_data = None
+            try:
+                liquid_fee_sat_vb = f_liquid_fee.result()
+            except Exception:
+                liquid_fee_sat_vb = 0.1
 
         fee_sat_vb = fees.get("halfHourFee", 10) if isinstance(fees, dict) else 10
 
@@ -136,9 +152,29 @@ class RemittanceOptimizer:
             )
         )
 
+        # --- Liquid Network (L-BTC, always live) ---
+        liquid_fee_btc = (liquid_fee_sat_vb * LIQUID_TX_VBYTES) / 1e8
+        liquid_fee_usd = liquid_fee_btc * btc_price if btc_price > 0 else 0.1
+        liquid_fee_percent = (
+            (liquid_fee_usd / amount_usd * 100) if amount_usd > 0 else 0.0
+        )
+
+        channels.append(
+            ChannelComparison(
+                name="Liquid Network",
+                fee_percent=round(liquid_fee_percent, 4),
+                fee_usd=round(liquid_fee_usd, 4),
+                amount_received=round(amount_usd - liquid_fee_usd, 2),
+                estimated_time="~2 minutes",
+                is_recommended=False,
+                is_live=True,
+            )
+        )
+
         # --- Savings calculation ---
+        bitcoin_native = {"Lightning Network", "Liquid Network"}
         worst_channel = max(
-            (ch for ch in channels if ch.name != "Lightning Network"),
+            (ch for ch in channels if ch.name not in bitcoin_native),
             key=lambda c: c.fee_usd,
         )
         worst_fee_usd = worst_channel.fee_usd

@@ -28,6 +28,12 @@ from app.alerts.monitor import AlertMonitor
 from app.alerts.routes import handle_alerts, handle_alert_status
 from app.gamification.routes import handle_achievements
 from app.gamification.achievements import AchievementEngine
+from app.liquid.routes import (
+    handle_network_status as handle_liquid_status,
+    handle_asset_info as handle_liquid_asset,
+    handle_lbtc,
+    handle_usdt,
+)
 
 _achievement_engine = AchievementEngine()
 _price_aggregator = PriceAggregator(settings.COINGECKO_API_KEY)
@@ -54,6 +60,10 @@ ROUTES = [
     ("GET", re.compile(r"^/alerts/status$"), "_alert_status"),
     ("POST", re.compile(r"^/pension/projection$"), "_pension_projection"),
     ("GET", re.compile(r"^/network/status$"), "_network_status"),
+    ("GET", re.compile(r"^/liquid/status$"), "_liquid_status"),
+    ("GET", re.compile(r"^/liquid/lbtc$"), "_liquid_lbtc"),
+    ("GET", re.compile(r"^/liquid/usdt$"), "_liquid_usdt"),
+    ("GET", re.compile(r"^/liquid/asset/(?P<asset_id>[0-9a-f]{64})$"), "_liquid_asset"),
 ]
 
 
@@ -253,6 +263,26 @@ class Handler(BaseHTTPRequestHandler):
         self, params: dict, body: dict, query: dict
     ) -> tuple[dict, int]:
         return handle_network_status(body)
+
+    def _liquid_status(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_liquid_status(body)
+
+    def _liquid_lbtc(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_lbtc(body)
+
+    def _liquid_usdt(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_usdt(body)
+
+    def _liquid_asset(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_liquid_asset(body, params.get("asset_id", ""))
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):

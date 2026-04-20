@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from .models import (
     Alert,
+    LiquidAsset,
+    LiquidNetworkStatus,
     PensionProjection,
     PriceQuote,
     RemittanceComparison,
@@ -175,3 +177,17 @@ class AsyncNetworkResource(_AsyncBase):
 class AsyncPriceResource(_AsyncBase):
     async def get(self) -> PriceQuote:
         return await asyncio.to_thread(self._sync().price.get)
+
+
+class AsyncLiquidResource(_AsyncBase):
+    async def status(self) -> LiquidNetworkStatus:
+        return await asyncio.to_thread(self._sync().liquid.status)
+
+    async def lbtc(self) -> LiquidAsset:
+        return await asyncio.to_thread(self._sync().liquid.lbtc)
+
+    async def usdt(self) -> LiquidAsset:
+        return await asyncio.to_thread(self._sync().liquid.usdt)
+
+    async def asset(self, asset_id: str) -> LiquidAsset:
+        return await asyncio.to_thread(self._sync().liquid.asset, asset_id)

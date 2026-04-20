@@ -17,13 +17,11 @@ function createPriceStore() {
 
   async function fetchPrice() {
     try {
-      const response = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true'
-      );
+      const response = await fetch('/api/price');
       const data = await response.json();
       set({
-        price: data.bitcoin.usd,
-        change24h: data.bitcoin.usd_24h_change || 0,
+        price: data.price_usd ?? data.price ?? 0,
+        change24h: data.change_24h ?? 0,
         lastUpdated: new Date()
       });
     } catch (error) {

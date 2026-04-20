@@ -34,10 +34,10 @@
 
   <div class="flex items-center gap-3">
     <span class="text-xs text-muted-foreground">
-      Updated: {formatTime($priceStore.lastUpdated)}
+      Actualizado: {formatTime($priceStore.lastUpdated)}
     </span>
     <Button variant="outline" size="sm" onclick={handleRefresh} disabled={isLoading}>
-      {isLoading ? 'Refreshing...' : 'Refresh'}
+      {isLoading ? 'Actualizando...' : 'Actualizar'}
     </Button>
   </div>
 </div>

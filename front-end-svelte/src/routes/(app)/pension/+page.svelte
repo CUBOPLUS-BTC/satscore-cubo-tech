@@ -15,8 +15,11 @@
 	import TrendUp from 'phosphor-svelte/lib/TrendUp';
 	import Geo from '$lib/components/geo.svelte';
 	import SavingsChart from '$lib/components/savings-chart.svelte';
+	import GrowthChart from '$lib/components/GrowthChart.svelte';
+	import PriceBar from '$lib/components/PriceBar.svelte';
 	import AnimatedNumber from '$lib/components/animated-number.svelte';
 	import { animateIn, staggerChildren, pressScale } from '$lib/motion';
+	import { priceStore } from '$lib/stores/price.svelte';
 
 	const HORIZONS = [10, 15, 25] as const;
 
@@ -48,6 +51,36 @@
 		piggyBank: number;
 	}
 
+	// Live price for scenario charts
+	let livePrice = $derived($priceStore.price);
+
+	$effect(() => {
+		priceStore.startAutoRefresh();
+		return () => priceStore.stopAutoRefresh();
+	});
+
+	// Scenario projections (friend's component integration)
+	let scenarioData = $derived.by(() => {
+		if (!fullResult || livePrice <= 0) return null;
+		const years = 25;
+		const totalInvested = monthlySaving * 12 * years;
+		const totalBtc = fullResult.total_btc_accumulated;
+
+		const scenarios = [
+			{ name: 'Pesimista', btcPrice: 150_000, color: 'border-red-400 hover:shadow-[0_0_30px_rgba(239,68,68,0.4)]' },
+			{ name: 'Base', btcPrice: 500_000, color: 'border-amber-500 hover:shadow-[0_0_30px_rgba(234,179,8,0.4)]' },
+			{ name: 'Optimista', btcPrice: 1_000_000, color: 'border-green-500 hover:shadow-[0_0_30px_rgba(34,197,94,0.4)]' },
+		];
+
+		return scenarios.map(s => {
+			const portfolioValue = totalBtc * s.btcPrice;
+			const gain = portfolioValue - totalInvested;
+			const gainPct = totalInvested > 0 ? (gain / totalInvested) * 100 : 0;
+			const multiplier = totalInvested > 0 ? portfolioValue / totalInvested : 0;
+			return { ...s, portfolioValue, gain, gainPct, multiplier, totalBtc, totalInvested };
+		});
+	});
+
 	let snapshots = $derived.by(() => {
 		if (!fullResult) return [];
 		const breakdown = fullResult.monthly_breakdown;
@@ -76,6 +109,9 @@
 		<h1 class="font-heading text-2xl font-bold tracking-tight">{i18n.t.pension.title}</h1>
 		<p class="text-sm text-muted-foreground mt-1">{i18n.t.pension.subtitle}</p>
 	</div>
+
+	<!-- Live BTC Price Bar -->
+	<PriceBar />
 
 	<Card>
 		<CardHeader>
@@ -231,6 +267,79 @@
 		{#if fullResult.monthly_data.length > 0}
 			<div use:animateIn={{ y: [20, 0], delay: 0.4 }}>
 				<SavingsChart data={fullResult.monthly_data} />
+			</div>
+		{/if}
+
+		<!-- Scenario Analysis (friend's component) -->
+		{#if scenarioData && livePrice > 0}
+			<div use:animateIn={{ y: [20, 0], delay: 0.5 }}>
+				<Card>
+					<CardHeader>
+						<CardTitle class="font-heading text-base">
+							{i18n.locale === 'es' ? '¿Y si el precio de Bitcoin sube?' : 'What if Bitcoin price goes up?'}
+						</CardTitle>
+						<p class="text-xs text-muted-foreground">
+							{i18n.locale === 'es'
+								? 'Tres escenarios de precio para tu ahorro de 25 años'
+								: 'Three price scenarios for your 25-year savings'}
+						</p>
+					</CardHeader>
+					<CardContent>
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+							{#each scenarioData as scenario}
+								<div class="p-4 border-2 rounded-xl space-y-3 transition-all duration-300 hover:scale-[1.02] {scenario.color}">
+									<div class="flex items-center justify-between">
+										<h3 class="text-base font-semibold">{scenario.name}</h3>
+										<Badge variant="secondary" class="text-xs">
+											BTC @ ${(scenario.btcPrice / 1000).toFixed(0)}K
+										</Badge>
+									</div>
+									<div class="space-y-2 text-sm">
+										<div class="flex justify-between">
+											<span class="text-muted-foreground">{i18n.locale === 'es' ? 'Valor del portafolio' : 'Portfolio value'}</span>
+											<span class="font-bold text-lg tabular-nums">
+												<AnimatedNumber value={scenario.portfolioValue} format={formatUSD} />
+											</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-muted-foreground">{i18n.locale === 'es' ? 'Ganancia' : 'Gain'}</span>
+											<span class="font-medium text-green-500 tabular-nums">
+												+<AnimatedNumber value={scenario.gain} format={formatUSD} /> ({scenario.gainPct.toFixed(0)}%)
+											</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-muted-foreground">{i18n.locale === 'es' ? 'Multiplicador' : 'Multiplier'}</span>
+											<span class="font-bold">{scenario.multiplier.toFixed(1)}x</span>
+										</div>
+									</div>
+									<div class="pt-2 border-t border-border text-xs text-muted-foreground tabular-nums">
+										{scenario.totalBtc.toFixed(6)} BTC × ${(scenario.btcPrice).toLocaleString()}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+			<!-- Growth Chart with 3 scenarios -->
+			<div use:animateIn={{ y: [20, 0], delay: 0.6 }}>
+				<Card>
+					<CardHeader class="pb-2">
+						<CardTitle class="font-heading text-base">
+							{i18n.locale === 'es' ? 'Proyección por escenario' : 'Scenario Projection'}
+						</CardTitle>
+					</CardHeader>
+					<CardContent class="pt-0">
+						<GrowthChart
+							years={25}
+							goalValue={monthlySaving * 12 * 25}
+							{livePrice}
+							btcOwned={0}
+							monthlyDCA={monthlySaving}
+						/>
+					</CardContent>
+				</Card>
 			</div>
 		{/if}
 

@@ -48,31 +48,31 @@
   <div class="flex items-center justify-between">
     <h3 class="text-lg font-semibold">{name}</h3>
     <Badge variant={goalReached ? 'default' : 'destructive'}>
-      {goalReached ? 'Goal Reached' : 'Shortfall'}
+      {goalReached ? 'Meta alcanzada' : 'Faltante'}
     </Badge>
   </div>
 
   <div class="space-y-2">
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Scenario Price</span>
+      <span class="text-muted-foreground">Precio BTC</span>
       <span class="font-medium" style="color: {priceColor}">
         {formatUSD(scenarioPrice)}
       </span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Final Value</span>
+      <span class="text-muted-foreground">Valor final</span>
       <span class="font-bold text-xl">{formatUSD(finalValue)}</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">BTC Needed</span>
+      <span class="text-muted-foreground">BTC necesario</span>
       <span class="font-mono">{formatBTC(btcNeeded)} BTC</span>
     </div>
 
     {#if shortfall > 0}
       <div class="flex justify-between text-sm">
-        <span class="text-muted-foreground">Shortfall</span>
+        <span class="text-muted-foreground">Faltante</span>
         <span class="text-red-500 font-medium">{formatUSD(shortfall)}</span>
       </div>
     {/if}
@@ -80,22 +80,22 @@
     <div class="h-px bg-border my-2"></div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Total Invested</span>
+      <span class="text-muted-foreground">Total invertido</span>
       <span>{formatUSD(totalInvested)}</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Gain</span>
+      <span class="text-muted-foreground">Ganancia</span>
       <span class="text-green-500 font-medium">{formatUSD(gain)}</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Gain %</span>
+      <span class="text-muted-foreground">Ganancia %</span>
       <span class="text-green-500 font-medium">{gainPct.toFixed(1)}%</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Multiplier</span>
+      <span class="text-muted-foreground">Multiplicador</span>
       <span class="font-bold">{multiplier.toFixed(2)}x</span>
     </div>
   </div>

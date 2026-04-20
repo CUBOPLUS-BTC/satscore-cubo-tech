@@ -1,4 +1,5 @@
-import { writable, derived } from 'svelte/store';
+import { writable } from 'svelte/store';
+import { endpoints } from '$lib/api/endpoints';
 
 interface PriceData {
   price: number;
@@ -16,7 +17,7 @@ function createPriceStore() {
   let intervalId: ReturnType<typeof setInterval> | null = null;
 
   async function fetchPrice() {
-    const response = await fetch('/api/price');
+    const response = await fetch(endpoints.price);
     if (!response.ok) throw new Error(`Price fetch failed: ${response.status}`);
     const data = await response.json();
     set({

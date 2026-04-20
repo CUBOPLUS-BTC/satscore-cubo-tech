@@ -194,15 +194,15 @@
 						</div>
 						<div class="flex justify-between items-center">
 							<span class="text-sm text-muted-foreground">{i18n.t.home.fastFee}</span>
-							<span class="text-sm font-semibold tabular-nums">{network.fees.fastestFee} sat/vB</span>
+							<span class="text-sm font-semibold tabular-nums">{network.fees.fastestFee} <span class="text-muted-foreground font-normal">sat/vB</span></span>
 						</div>
 						<div class="flex justify-between items-center">
 							<span class="text-sm text-muted-foreground">{i18n.t.home.economyFee}</span>
-							<span class="text-sm font-semibold tabular-nums text-green-600 dark:text-green-500">{network.fees.economyFee} sat/vB</span>
+							<span class="text-sm font-semibold tabular-nums text-green-600 dark:text-green-500">{network.fees.economyFee} <span class="text-muted-foreground font-normal">sat/vB</span></span>
 						</div>
 						<div class="flex justify-between items-center">
 							<span class="text-sm text-muted-foreground">{i18n.t.home.mempoolTxs}</span>
-							<span class="text-sm font-semibold tabular-nums">{network.mempool_size.count.toLocaleString()} txs</span>
+							<span class="text-sm font-semibold tabular-nums">{network.mempool_size.count.toLocaleString()}</span>
 						</div>
 					</div>
 				{:else}

@@ -10,6 +10,7 @@ class ChannelComparison:
     amount_received: float
     estimated_time: str
     is_recommended: bool
+    is_live: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -19,6 +20,7 @@ class ChannelComparison:
             "amount_received": self.amount_received,
             "estimated_time": self.estimated_time,
             "is_recommended": self.is_recommended,
+            "is_live": self.is_live,
         }
 
 
@@ -43,6 +45,8 @@ class RemittanceResponse:
     channels: list
     annual_savings: float
     best_channel: str
+    savings_vs_worst: float = 0.0
+    worst_channel_name: str = ""
     best_time: Optional[SendTimeRecommendation] = None
 
     def to_dict(self) -> dict:
@@ -52,6 +56,8 @@ class RemittanceResponse:
             ],
             "annual_savings": self.annual_savings,
             "best_channel": self.best_channel,
+            "savings_vs_worst": self.savings_vs_worst,
+            "worst_channel_name": self.worst_channel_name,
             "best_time": (
                 self.best_time.to_dict()
                 if self.best_time and hasattr(self.best_time, "to_dict")

@@ -139,10 +139,19 @@
 
 {#if result}
 	<div class="mt-8 space-y-6" use:animateIn={{ y: [30, 0], duration: 0.6 }}>
-		<div class="flex items-center gap-3">
-			<Geo state="success" class="w-16 h-16 shrink-0" />
-			<p class="text-sm font-medium text-foreground">{i18n.t.remittance.resultsReady}</p>
-		</div>
+		<!-- Impact message hero -->
+		{#if result.savings_vs_worst > 0}
+			<div class="rounded-2xl border-2 border-primary bg-primary/5 p-6 text-center space-y-2">
+				<Geo state="success" class="w-16 h-16 mx-auto" />
+				<p class="text-sm text-muted-foreground">{i18n.t.remittance.impactMessage}</p>
+				<p class="font-heading text-4xl font-bold text-primary tabular-nums">
+					<AnimatedNumber value={result.savings_vs_worst} format={(v) => `$${v.toFixed(2)}`} duration={1000} />
+				</p>
+				<p class="text-sm text-muted-foreground">
+					{i18n.t.remittance.impactMore} <span class="font-semibold text-foreground">{result.worst_channel_name}</span> {i18n.t.remittance.impactPerTransfer}
+				</p>
+			</div>
+		{/if}
 
 		{#if i18n.t.remittance.legalTender}
 			<p class="text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">{i18n.t.remittance.legalTender}</p>
@@ -189,6 +198,35 @@
 					<ChannelCard {channel} />
 				{/each}
 			</div>
+		</div>
+
+		<!-- Deep links to wallets -->
+		<div use:animateIn={{ y: [16, 0], delay: 0.5 }}>
+			<Card>
+				<CardHeader>
+					<CardTitle class="font-heading text-base">{i18n.t.remittance.walletsTitle}</CardTitle>
+					<p class="text-xs text-muted-foreground">{i18n.t.remittance.walletsSubtitle}</p>
+				</CardHeader>
+				<CardContent>
+					<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+						{#each [
+							{ name: 'Blink', url: 'https://www.blink.sv/', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20' },
+							{ name: 'Strike', url: 'https://strike.me/', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20' },
+							{ name: 'Phoenix', url: 'https://phoenix.acinq.co/', color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20' },
+							{ name: 'WoS', url: 'https://www.walletofsatoshi.com/', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20' },
+						] as wallet}
+							<a
+								href={wallet.url}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-medium transition-colors {wallet.color}"
+							>
+								{i18n.t.remittance.sendWith} {wallet.name}
+							</a>
+						{/each}
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	</div>
 {/if}

@@ -1,3 +1,10 @@
+"""Pension projection calculator.
+
+Projects future value of monthly Bitcoin savings using historical CAGR
+to estimate growth. Compares against traditional pension funds (2% annual)
+and a simple piggy bank (0% growth).
+"""
+
 from ..services.coingecko_client import CoinGeckoClient
 from .schemas import PensionProjection
 
@@ -19,32 +26,41 @@ class PensionCalculator:
         except Exception:
             historical = []
 
-        monthly_prices = self._extract_monthly_prices(historical)
+        # Calculate historical CAGR from available data
+        annual_growth = self._calc_cagr(historical)
 
-        # If we don't have enough historical months, fill with average
-        if monthly_prices:
-            avg_historical = sum(monthly_prices) / len(monthly_prices)
-        else:
-            avg_historical = current_price if current_price > 0 else 60000.0
+        # Use a conservative estimate: 50% of historical CAGR, min 10%
+        projected_annual = max(annual_growth * 0.5, 0.10)
+        monthly_growth = (1 + projected_annual) ** (1 / 12) - 1
 
-        while len(monthly_prices) < total_months:
-            monthly_prices.append(avg_historical)
+        # Traditional pension fund: 2% annual
+        trad_monthly = (1.02) ** (1 / 12) - 1
 
-        # Simulate DCA
+        # Simulate DCA with projected growth
         total_invested = 0.0
         total_btc = 0.0
+        btc_accumulated = 0.0
+        trad_accumulated = 0.0
+        projected_price = current_price if current_price > 0 else 85000.0
+
         breakdown = []
+        monthly_data = []
 
         for month_idx in range(total_months):
-            price = monthly_prices[month_idx]
-            if price <= 0:
-                price = avg_historical
-
-            btc_bought = monthly_saving_usd / price
             total_invested += monthly_saving_usd
+
+            # BTC bought at projected price this month
+            btc_bought = monthly_saving_usd / projected_price if projected_price > 0 else 0
             total_btc += btc_bought
 
-            value_at_current = total_btc * current_price if current_price > 0 else 0.0
+            # Project price forward
+            projected_price *= (1 + monthly_growth)
+
+            # Value all BTC at current projected price
+            btc_value = total_btc * projected_price
+
+            # Traditional fund compounds at 2%
+            trad_accumulated = (trad_accumulated + monthly_saving_usd) * (1 + trad_monthly)
 
             breakdown.append(
                 {
@@ -52,54 +68,42 @@ class PensionCalculator:
                     "invested": round(total_invested, 2),
                     "btc_bought": round(btc_bought, 8),
                     "btc_total": round(total_btc, 8),
-                    "value_usd": round(value_at_current, 2),
+                    "value_usd": round(btc_value, 2),
                 }
             )
 
-        avg_buy_price = (total_invested / total_btc) if total_btc > 0 else 0.0
-        current_value = total_btc * current_price if current_price > 0 else 0.0
-
-        monthly_data = []
-        for m in range(1, years * 12 + 1):
-            month_usd = monthly_saving_usd * m
-            btc_at_month = (monthly_saving_usd / avg_historical) * m
-            btc_value = btc_at_month * current_price
             monthly_data.append(
                 {
-                    "month": m,
-                    "invested": round(month_usd, 2),
-                    "traditional_value": round(month_usd * (1.02 ** (m / 12)), 2),
+                    "month": month_idx + 1,
+                    "invested": round(total_invested, 2),
+                    "traditional_value": round(trad_accumulated, 2),
                     "btc_value": round(btc_value, 2),
                 }
             )
 
+        avg_buy_price = (total_invested / total_btc) if total_btc > 0 else 0.0
+        final_value = breakdown[-1]["value_usd"] if breakdown else 0.0
+
         return PensionProjection(
             total_invested_usd=round(total_invested, 2),
             total_btc_accumulated=round(total_btc, 8),
-            current_value_usd=round(current_value, 2),
+            current_value_usd=round(final_value, 2),
             avg_buy_price=round(avg_buy_price, 2),
             current_btc_price=round(current_price, 2),
             monthly_breakdown=breakdown,
             monthly_data=monthly_data,
         )
 
-    def _extract_monthly_prices(self, historical: list) -> list[float]:
-        """Extract one price per month from daily historical data."""
-        if not historical:
-            return []
+    def _calc_cagr(self, historical: list) -> float:
+        """Calculate compound annual growth rate from price history."""
+        if not historical or len(historical) < 30:
+            return 0.30  # Default 30% if no data
 
-        monthly: list[float] = []
-        current_month = None
+        oldest_price = historical[0][1]
+        newest_price = historical[-1][1]
+        days_span = (historical[-1][0] - historical[0][0]) / (1000 * 86400)
 
-        for timestamp_ms, price in historical:
-            # Convert ms timestamp to month key
-            import time
+        if days_span <= 0 or oldest_price <= 0:
+            return 0.30
 
-            t = time.gmtime(timestamp_ms / 1000)
-            month_key = (t.tm_year, t.tm_mon)
-
-            if month_key != current_month:
-                monthly.append(price)
-                current_month = month_key
-
-        return monthly
+        return ((newest_price / oldest_price) ** (365 / days_span)) - 1

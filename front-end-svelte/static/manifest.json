@@ -1,9 +1,39 @@
 {
-  "name": "Magma - Bitcoin Financial Toolkit",
+  "name": "Magma — Inteligencia Financiera Bitcoin",
   "short_name": "Magma",
+  "description": "Compará el costo de enviar remesas y planificá tu retiro con Bitcoin. Hecho en El Salvador.",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#cc5500",
-  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "categories": ["finance", "utilities"],
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Comparar remesas",
+      "url": "/remittance",
+      "description": "Compará costos de envío a El Salvador"
+    },
+    {
+      "name": "Plan de retiro",
+      "url": "/pension",
+      "description": "Calculá tu pensión Bitcoin"
+    }
+  ]
 }

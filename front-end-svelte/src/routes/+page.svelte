@@ -23,7 +23,6 @@
   import PiggyBank from 'phosphor-svelte/lib/PiggyBank';
   import Cube from 'phosphor-svelte/lib/Cube';
   import AnimatedNumber from '$lib/components/animated-number.svelte';
-  import NumberTicker from '$lib/components/magic/number-ticker.svelte';
   import Marquee from '$lib/components/magic/marquee.svelte';
 
   let searchParams = $derived(browser ? new URLSearchParams(window.location.search) : null);
@@ -58,8 +57,8 @@
   let saved = $derived(traditionalFee - lightningFee);
   let annualSaved = $derived(saved * 12);
 
-  // DCA example: $20/month for 4 years at ~average BTC growth
-  let dcaMonthly = 20;
+  // Savings example: $10/month for 4 years at ~average BTC growth
+  let dcaMonthly = 10;
   let dcaYears = 4;
   let dcaInvested = $derived(dcaMonthly * 12 * dcaYears);
   let dcaCurrentValue = $derived(dcaInvested * 2.8); // conservative historical multiplier
@@ -115,12 +114,16 @@
         <!-- Stats inline -->
         <div class="flex gap-8 pt-4">
           <div>
-            <span class="font-heading text-2xl font-bold">$<NumberTicker value={7.7} decimalPlaces={1} delay={0.2} />B</span>
+            <span class="font-heading text-2xl font-bold">{t.stats.remittanceVolume}</span>
             <p class="text-[11px] text-muted-foreground">{t.stats.remittanceLabel}</p>
           </div>
           <div>
-            <span class="font-heading text-2xl font-bold text-red-500"><NumberTicker value={6.2} decimalPlaces={1} delay={0.4} />%</span>
+            <span class="font-heading text-2xl font-bold text-red-500">{t.stats.avgFee}</span>
             <p class="text-[11px] text-muted-foreground">{t.stats.avgFeeLabel}</p>
+          </div>
+          <div>
+            <span class="font-heading text-2xl font-bold text-green-500">{t.stats.lightningFee}</span>
+            <p class="text-[11px] text-muted-foreground">{t.stats.lightningFeeLabel}</p>
           </div>
         </div>
       </div>
@@ -336,7 +339,7 @@
         <div>
           <span class="text-xs text-muted-foreground">{i18n.t.home.fastFee}</span>
           {#if network}
-            <p class="font-heading text-xl font-bold tabular-nums mt-0.5">{network.fees.fastestFee} <span class="text-sm font-normal text-muted-foreground">sat/vB</span></p>
+            <p class="font-heading text-xl font-bold tabular-nums mt-0.5">{network.fees.fastestFee} <span class="text-sm font-normal text-muted-foreground">sats</span></p>
           {:else}
             <Skeleton class="h-7 w-20 mt-0.5" />
           {/if}
@@ -344,7 +347,7 @@
         <div>
           <span class="text-xs text-muted-foreground">{i18n.t.home.economyFee}</span>
           {#if network}
-            <p class="font-heading text-xl font-bold tabular-nums text-green-500 mt-0.5">{network.fees.economyFee} <span class="text-sm font-normal text-muted-foreground">sat/vB</span></p>
+            <p class="font-heading text-xl font-bold tabular-nums text-green-500 mt-0.5">{network.fees.economyFee} <span class="text-sm font-normal text-muted-foreground">sats</span></p>
           {:else}
             <Skeleton class="h-7 w-20 mt-0.5" />
           {/if}

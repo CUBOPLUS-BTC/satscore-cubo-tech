@@ -5,6 +5,7 @@ export interface ChannelComparison {
   amount_received: number;
   estimated_time: string;
   is_recommended: boolean;
+  is_live: boolean;
 }
 
 export interface SendTimeRecommendation {
@@ -18,5 +19,7 @@ export interface RemittanceResult {
   channels: ChannelComparison[];
   annual_savings: number;
   best_channel: string;
+  savings_vs_worst: number;
+  worst_channel_name: string;
   best_time?: SendTimeRecommendation;
 }

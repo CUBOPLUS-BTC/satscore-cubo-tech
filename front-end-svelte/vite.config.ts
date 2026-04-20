@@ -7,4 +7,10 @@ export default defineConfig({
 	ssr: {
 		noExternal: ['@tanstack/svelte-query'],
 	},
+	resolve: {
+		conditions: ['svelte', 'browser', 'import']
+	},
+	server: {
+		port: 8080
+	}
 });

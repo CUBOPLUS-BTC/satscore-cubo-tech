@@ -10,7 +10,4 @@ export default defineConfig({
 	resolve: {
 		conditions: ['svelte', 'browser', 'import']
 	},
-	server: {
-		port: 8080
-	}
 });

@@ -1,4 +1,6 @@
-const BASE = '/proxy';
+import { PUBLIC_API_URL } from '$env/static/public';
+
+const BASE = PUBLIC_API_URL;
 
 export const endpoints = {
   auth: {
@@ -31,4 +33,4 @@ export const endpoints = {
   network: {
     status: `${BASE}/network/status`,
   },
-} as const;
+};

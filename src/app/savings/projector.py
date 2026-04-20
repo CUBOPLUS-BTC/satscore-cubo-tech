@@ -1,5 +1,7 @@
 """DCA projection engine using real Bitcoin historical data."""
 
+import math
+
 from ..services.coingecko_client import CoinGeckoClient
 
 
@@ -13,11 +15,23 @@ class SavingsProjector:
         Uses real historical data to calculate Bitcoin's CAGR,
         then projects forward under 3 scenarios.
         """
+        if (
+            not isinstance(monthly_usd, (int, float))
+            or isinstance(monthly_usd, bool)
+            or not math.isfinite(monthly_usd)
+            or monthly_usd <= 0
+        ):
+            raise ValueError("monthly_usd must be a positive finite number")
+        if not isinstance(years, int) or isinstance(years, bool) or years < 1:
+            raise ValueError("years must be a positive integer")
+
         prices = self.coingecko.get_historical_prices(days=365)
         current_price = self.coingecko.get_price()
 
         if len(prices) < 30:
             raise ValueError("Insufficient price data for projection")
+        if current_price <= 0:
+            raise ValueError("Invalid current BTC price")
 
         oldest_price = prices[0][1]
         newest_price = prices[-1][1]

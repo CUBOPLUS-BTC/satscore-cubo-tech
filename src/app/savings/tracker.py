@@ -1,6 +1,8 @@
 """Savings goal and deposit tracking."""
 
 import time
+from datetime import datetime, timezone, timedelta
+
 from ..database import get_conn, _is_postgres
 from ..services.coingecko_client import CoinGeckoClient
 
@@ -150,25 +152,33 @@ class SavingsTracker:
             "next_milestone": next_milestone,
         }
 
-    def _calculate_streak(self, deposits: list) -> int:
-        """Calculate consecutive months with deposits, counting backwards from now."""
+    def _calculate_streak(self, deposits: list, now: float | None = None) -> int:
+        """Consecutive calendar months with deposits, counting backwards.
+
+        A month counts when at least one deposit lands within that UTC
+        calendar month. The walk stops at the first missing month.
+        """
         if not deposits:
             return 0
 
-        now = time.time()
-        current_month = int(now // (30 * 86400))
-        streak = 0
+        current_ts = time.time() if now is None else now
+        cursor = datetime.fromtimestamp(current_ts, timezone.utc).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        )
 
-        months_with_deposits = set()
+        months_with_deposits: set[tuple[int, int]] = set()
         for d in deposits:
             ts = d[3] if isinstance(d, tuple) else d["created_at"]
-            month_idx = int(ts // (30 * 86400))
-            months_with_deposits.add(month_idx)
+            if not isinstance(ts, (int, float)):
+                continue
+            dt = datetime.fromtimestamp(ts, timezone.utc)
+            months_with_deposits.add((dt.year, dt.month))
 
-        for i in range(36):
-            if (current_month - i) in months_with_deposits:
+        streak = 0
+        for _ in range(120):  # cap look-back at 10 years
+            if (cursor.year, cursor.month) in months_with_deposits:
                 streak += 1
+                cursor = (cursor - timedelta(days=1)).replace(day=1)
             else:
                 break
-
         return streak

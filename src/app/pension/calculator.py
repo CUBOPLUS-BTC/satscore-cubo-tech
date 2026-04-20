@@ -5,6 +5,8 @@ to estimate growth. Compares against traditional pension funds (2% annual)
 and a simple piggy bank (0% growth).
 """
 
+import math
+
 from ..services.coingecko_client import CoinGeckoClient
 from .schemas import PensionProjection
 
@@ -14,10 +16,23 @@ class PensionCalculator:
         self.coingecko = CoinGeckoClient()
 
     def project(self, monthly_saving_usd: float, years: int) -> PensionProjection:
+        if (
+            not isinstance(monthly_saving_usd, (int, float))
+            or isinstance(monthly_saving_usd, bool)
+            or not math.isfinite(monthly_saving_usd)
+            or monthly_saving_usd <= 0
+        ):
+            raise ValueError("monthly_saving_usd must be a positive finite number")
+        if not isinstance(years, int) or isinstance(years, bool) or years < 1:
+            raise ValueError("years must be a positive integer")
+
         total_months = years * 12
 
         current_price = self.coingecko.get_price()
         historical = self.coingecko.get_historical_prices(days=365)
+
+        if current_price <= 0:
+            raise ValueError("Invalid current BTC price")
 
         # Calculate historical CAGR from available data
         annual_growth = self._calc_cagr(historical)

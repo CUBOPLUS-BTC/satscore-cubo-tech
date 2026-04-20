@@ -1,30 +1,26 @@
-import urllib.request
-import urllib.error
-import json
-import time
 from typing import Any
+
+from .http_cache import BoundedCache, cached_http_get
 
 
 class KrakenClient:
+    _shared_cache: BoundedCache = BoundedCache(max_size=64)
+
     def __init__(self):
         self.base_url = "https://api.kraken.com/0/public"
-        self._cache: dict[str, tuple[Any, float]] = {}
 
-    def _cached_get(self, key: str, url: str, ttl: int) -> Any:
-        now = time.time()
-        if key in self._cache:
-            data, expiry = self._cache[key]
-            if now < expiry:
-                return data
-
-        req = urllib.request.Request(url, headers={"User-Agent": "Magma/1.0"})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = json.loads(response.read().decode())
-
-        self._cache[key] = (data, now + ttl)
-        return data
+    def _get(self, key: str, url: str, ttl: int) -> Any:
+        return cached_http_get(
+            self._shared_cache, key, url, ttl, timeout=10, retries=1
+        )
 
     def get_price(self) -> float:
         url = f"{self.base_url}/Ticker?pair=XXBTZUSD"
-        data = self._cached_get("kraken_price", url, 60)
-        return float(data["result"]["XXBTZUSD"]["c"][0])
+        data = self._get("kraken_price", url, 60)
+        try:
+            price = float(data["result"]["XXBTZUSD"]["c"][0])
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ValueError("Unexpected Kraken ticker response") from exc
+        if price <= 0:
+            raise ValueError("Kraken returned non-positive price")
+        return price

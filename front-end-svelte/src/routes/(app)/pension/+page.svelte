@@ -20,6 +20,21 @@
 	import AnimatedNumber from '$lib/components/animated-number.svelte';
 	import { animateIn, staggerChildren, pressScale } from '$lib/motion';
 	import { priceStore } from '$lib/stores/price.svelte';
+	import PdfExportButton from '$lib/components/pdf-export-button.svelte';
+	import { exportPensionPdf } from '$lib/utils/export-pdf';
+
+	let chartContainerRef = $state<HTMLElement | null>(null);
+
+	async function handleExportPdf() {
+		await exportPensionPdf({
+			monthlySaving,
+			snapshots,
+			avgBuyPrice: fullResult?.avg_buy_price ?? 0,
+			currentBtcPrice: fullResult?.current_btc_price ?? 0,
+			scenarioData: scenarioData ?? null,
+			chartEl: chartContainerRef,
+		});
+	}
 
 	const HORIZONS = [10, 15, 25] as const;
 
@@ -178,14 +193,17 @@
 {#if fullResult && snapshots.length > 0}
 	<div class="mt-8 space-y-8" use:animateIn={{ y: [30, 0], duration: 0.6 }}>
 
-		<div class="flex items-center gap-3">
-			<Geo state="success" class="w-16 h-16 shrink-0" />
-			<div>
-				<p class="text-sm font-medium text-foreground">{i18n.t.pension.resultsReady}</p>
-				<Badge variant="secondary" class="text-xs font-normal mt-1">
-					{i18n.t.pension.basedOnHistorical}
-				</Badge>
+		<div class="flex items-center justify-between gap-3 flex-wrap">
+			<div class="flex items-center gap-3">
+				<Geo state="success" class="w-16 h-16 shrink-0" />
+				<div>
+					<p class="text-sm font-medium text-foreground">{i18n.t.pension.resultsReady}</p>
+					<Badge variant="secondary" class="text-xs font-normal mt-1">
+						{i18n.t.pension.basedOnHistorical}
+					</Badge>
+				</div>
 			</div>
+			<PdfExportButton onclick={handleExportPdf} label="Exportar PDF" />
 		</div>
 
 		<!-- 3 horizons side by side -->
@@ -265,7 +283,7 @@
 
 		<!-- Chart (full 25-year projection) -->
 		{#if fullResult.monthly_data.length > 0}
-			<div use:animateIn={{ y: [20, 0], delay: 0.4 }}>
+			<div use:animateIn={{ y: [20, 0], delay: 0.4 }} bind:this={chartContainerRef}>
 				<SavingsChart data={fullResult.monthly_data} />
 			</div>
 		{/if}

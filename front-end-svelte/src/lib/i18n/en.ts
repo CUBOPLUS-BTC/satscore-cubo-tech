@@ -103,7 +103,7 @@ export const en = {
     piggyBankCaption: 'Same money, different future',
     emptyState: 'Enter your monthly saving and time horizon to see your retirement projection.',
     resultsReady: 'Here is your projection!',
-    disclaimer: 'This is not financial advice. Based on historical prices, the future may vary. Bitcoin is volatile — only save what you can afford.',
+    disclaimer: 'This is not financial advice. Based on historical prices, the future may vary. Bitcoin is volatile, only save what you can afford.',
     errorFetch: 'Failed to calculate projection',
     scenarioTitle: 'What if Bitcoin price goes up?',
     scenarioSubtitle: 'Three price scenarios for your 25-year savings',
@@ -225,7 +225,7 @@ export const en = {
     stats: {
       remittanceVolume: '$10B+',
       remittanceLabel: 'in remittances received in El Salvador (2024)',
-      avgFee: '5–9%',
+      avgFee: '5-9%',
       avgFeeLabel: 'lost to traditional fees',
       lightningFee: '<0.3%',
       lightningFeeLabel: 'with Lightning Network',

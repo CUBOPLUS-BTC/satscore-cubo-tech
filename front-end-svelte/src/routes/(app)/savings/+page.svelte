@@ -15,6 +15,21 @@
 	import SavingsChart from '$lib/components/savings-chart.svelte';
 	import AnimatedNumber from '$lib/components/animated-number.svelte';
 	import { animateIn, staggerChildren, pressScale } from '$lib/motion';
+	import PdfExportButton from '$lib/components/pdf-export-button.svelte';
+	import { exportSavingsPdf } from '$lib/utils/export-pdf';
+
+	let savingsChartRef = $state<HTMLElement | null>(null);
+
+	async function handleExportPdf() {
+		if (!projection) return;
+		await exportSavingsPdf({
+			monthlyAmount,
+			years,
+			scenarios: projection.scenarios,
+			traditionalValue: projection.traditional_value,
+			chartEl: savingsChartRef,
+		});
+	}
 
 	const client = useQueryClient();
 
@@ -166,10 +181,14 @@
 						</div>
 
 						{#if projection.monthly_data.length > 0}
-							<div use:animateIn={{ y: [16, 0], delay: 0.4 }}>
+							<div use:animateIn={{ y: [16, 0], delay: 0.4 }} bind:this={savingsChartRef}>
 								<SavingsChart data={projection.monthly_data} />
 							</div>
 						{/if}
+
+						<div class="flex justify-end pt-2">
+							<PdfExportButton onclick={handleExportPdf} label="Exportar proyección" />
+						</div>
 					</div>
 				{/if}
 			</CardContent>

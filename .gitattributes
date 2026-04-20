@@ -1,0 +1,20 @@
+# GitHub Linguist overrides
+# The backend (Python/FastAPI) is the primary codebase of this repo.
+# The Svelte front-end is a secondary client and is excluded from
+# language statistics so Linguist reflects the backend accurately.
+
+front-end-svelte/** linguist-vendored
+front-end-svelte/**/*.svelte linguist-vendored
+front-end-svelte/**/*.ts linguist-vendored
+front-end-svelte/**/*.js linguist-vendored
+front-end-svelte/**/*.css linguist-vendored
+front-end-svelte/**/*.html linguist-vendored
+
+# Config / infra files should not count as code languages
+Dockerfile.frontend linguist-vendored
+nginx.conf linguist-vendored
+wrangler.toml linguist-vendored
+docker-compose.yml linguist-vendored
+src/Dockerfile linguist-vendored
+src/docker-compose.prod.yml linguist-vendored
+src/deploy-hetzner.sh linguist-vendored

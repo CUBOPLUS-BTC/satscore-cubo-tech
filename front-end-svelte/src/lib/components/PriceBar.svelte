@@ -1,6 +1,6 @@
 <script lang="ts">
   import { priceStore } from '$lib/stores/price.svelte';
-  import { Card } from '$lib/components/ui/card';
+  import { i18n } from '$lib/i18n/index.svelte';
   import { Button } from '$lib/components/ui/button';
 
   let isLoading = $state(false);
@@ -34,10 +34,10 @@
 
   <div class="flex items-center gap-3">
     <span class="text-xs text-muted-foreground">
-      Actualizado: {formatTime($priceStore.lastUpdated)}
+      {i18n.t.pension.priceBar.updated} {formatTime($priceStore.lastUpdated)}
     </span>
     <Button variant="outline" size="sm" onclick={handleRefresh} disabled={isLoading}>
-      {isLoading ? 'Actualizando...' : 'Actualizar'}
+      {isLoading ? i18n.t.pension.priceBar.refreshing : i18n.t.pension.priceBar.refresh}
     </Button>
   </div>
 </div>

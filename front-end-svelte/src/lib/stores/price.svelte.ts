@@ -16,17 +16,14 @@ function createPriceStore() {
   let intervalId: ReturnType<typeof setInterval> | null = null;
 
   async function fetchPrice() {
-    try {
-      const response = await fetch('/api/price');
-      const data = await response.json();
-      set({
-        price: data.price_usd ?? data.price ?? 0,
-        change24h: data.change_24h ?? 0,
-        lastUpdated: new Date()
-      });
-    } catch (error) {
-      console.error('Failed to fetch BTC price:', error);
-    }
+    const response = await fetch('/api/price');
+    if (!response.ok) throw new Error(`Price fetch failed: ${response.status}`);
+    const data = await response.json();
+    set({
+      price: data.price_usd,
+      change24h: data.change_24h ?? 0,
+      lastUpdated: new Date()
+    });
   }
 
   return {

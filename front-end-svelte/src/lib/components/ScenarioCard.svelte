@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Card } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
+  import { i18n } from '$lib/i18n/index.svelte';
 
   interface Props {
     name: string;
@@ -48,31 +49,31 @@
   <div class="flex items-center justify-between">
     <h3 class="text-lg font-semibold">{name}</h3>
     <Badge variant={goalReached ? 'default' : 'destructive'}>
-      {goalReached ? 'Meta alcanzada' : 'Faltante'}
+      {goalReached ? i18n.t.pension.goalReached : i18n.t.pension.shortfall}
     </Badge>
   </div>
 
   <div class="space-y-2">
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Precio BTC</span>
+      <span class="text-muted-foreground">{i18n.t.pension.btcPrice}</span>
       <span class="font-medium" style="color: {priceColor}">
         {formatUSD(scenarioPrice)}
       </span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Valor final</span>
+      <span class="text-muted-foreground">{i18n.t.pension.finalValue}</span>
       <span class="font-bold text-xl">{formatUSD(finalValue)}</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">BTC necesario</span>
+      <span class="text-muted-foreground">{i18n.t.pension.btcNeeded}</span>
       <span class="font-mono">{formatBTC(btcNeeded)} BTC</span>
     </div>
 
     {#if shortfall > 0}
       <div class="flex justify-between text-sm">
-        <span class="text-muted-foreground">Faltante</span>
+        <span class="text-muted-foreground">{i18n.t.pension.shortfall}</span>
         <span class="text-red-500 font-medium">{formatUSD(shortfall)}</span>
       </div>
     {/if}
@@ -80,22 +81,22 @@
     <div class="h-px bg-border my-2"></div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Total invertido</span>
+      <span class="text-muted-foreground">{i18n.t.pension.totalInvestedLabel}</span>
       <span>{formatUSD(totalInvested)}</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Ganancia</span>
+      <span class="text-muted-foreground">{i18n.t.pension.gain}</span>
       <span class="text-green-500 font-medium">{formatUSD(gain)}</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Ganancia %</span>
+      <span class="text-muted-foreground">{i18n.t.pension.gainPercent}</span>
       <span class="text-green-500 font-medium">{gainPct.toFixed(1)}%</span>
     </div>
 
     <div class="flex justify-between text-sm">
-      <span class="text-muted-foreground">Multiplicador</span>
+      <span class="text-muted-foreground">{i18n.t.pension.multiplier}</span>
       <span class="font-bold">{multiplier.toFixed(2)}x</span>
     </div>
   </div>

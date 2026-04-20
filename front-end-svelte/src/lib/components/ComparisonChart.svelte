@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
+	import { i18n } from '$lib/i18n/index.svelte';
 
 	interface Props {
 		years: number;

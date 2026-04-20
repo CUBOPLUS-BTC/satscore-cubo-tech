@@ -67,9 +67,9 @@
 		const totalBtc = fullResult.total_btc_accumulated;
 
 		const scenarios = [
-			{ name: 'Pesimista', btcPrice: 150_000, color: 'border-red-400 hover:shadow-[0_0_30px_rgba(239,68,68,0.4)]' },
-			{ name: 'Base', btcPrice: 500_000, color: 'border-amber-500 hover:shadow-[0_0_30px_rgba(234,179,8,0.4)]' },
-			{ name: 'Optimista', btcPrice: 1_000_000, color: 'border-green-500 hover:shadow-[0_0_30px_rgba(34,197,94,0.4)]' },
+			{ name: i18n.t.pension.pessimistic, btcPrice: 150_000, color: 'border-red-400 hover:shadow-[0_0_30px_rgba(239,68,68,0.4)]' },
+			{ name: i18n.t.pension.base, btcPrice: 500_000, color: 'border-amber-500 hover:shadow-[0_0_30px_rgba(234,179,8,0.4)]' },
+			{ name: i18n.t.pension.optimistic, btcPrice: 1_000_000, color: 'border-green-500 hover:shadow-[0_0_30px_rgba(34,197,94,0.4)]' },
 		];
 
 		return scenarios.map(s => {
@@ -276,12 +276,10 @@
 				<Card>
 					<CardHeader>
 						<CardTitle class="font-heading text-base">
-							{i18n.locale === 'es' ? '¿Y si el precio de Bitcoin sube?' : 'What if Bitcoin price goes up?'}
+							{i18n.t.pension.scenarioTitle}
 						</CardTitle>
 						<p class="text-xs text-muted-foreground">
-							{i18n.locale === 'es'
-								? 'Tres escenarios de precio para tu ahorro de 25 años'
-								: 'Three price scenarios for your 25-year savings'}
+							{i18n.t.pension.scenarioSubtitle}
 						</p>
 					</CardHeader>
 					<CardContent>
@@ -296,19 +294,19 @@
 									</div>
 									<div class="space-y-2 text-sm">
 										<div class="flex justify-between">
-											<span class="text-muted-foreground">{i18n.locale === 'es' ? 'Valor del portafolio' : 'Portfolio value'}</span>
+											<span class="text-muted-foreground">{i18n.t.pension.portfolioValue}</span>
 											<span class="font-bold text-lg tabular-nums">
 												<AnimatedNumber value={scenario.portfolioValue} format={formatUSD} />
 											</span>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-muted-foreground">{i18n.locale === 'es' ? 'Ganancia' : 'Gain'}</span>
+											<span class="text-muted-foreground">{i18n.t.pension.gain}</span>
 											<span class="font-medium text-green-500 tabular-nums">
 												+<AnimatedNumber value={scenario.gain} format={formatUSD} /> ({scenario.gainPct.toFixed(0)}%)
 											</span>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-muted-foreground">{i18n.locale === 'es' ? 'Multiplicador' : 'Multiplier'}</span>
+											<span class="text-muted-foreground">{i18n.t.pension.multiplier}</span>
 											<span class="font-bold">{scenario.multiplier.toFixed(1)}x</span>
 										</div>
 									</div>
@@ -327,7 +325,7 @@
 				<Card>
 					<CardHeader class="pb-2">
 						<CardTitle class="font-heading text-base">
-							{i18n.locale === 'es' ? 'Proyección por escenario' : 'Scenario Projection'}
+							{i18n.t.pension.scenarioProjection}
 						</CardTitle>
 					</CardHeader>
 					<CardContent class="pt-0">

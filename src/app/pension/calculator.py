@@ -16,15 +16,8 @@ class PensionCalculator:
     def project(self, monthly_saving_usd: float, years: int) -> PensionProjection:
         total_months = years * 12
 
-        try:
-            current_price = self.coingecko.get_price()
-        except Exception:
-            current_price = 0.0
-
-        try:
-            historical = self.coingecko.get_historical_prices(days=365)
-        except Exception:
-            historical = []
+        current_price = self.coingecko.get_price()
+        historical = self.coingecko.get_historical_prices(days=365)
 
         # Calculate historical CAGR from available data
         annual_growth = self._calc_cagr(historical)
@@ -41,7 +34,7 @@ class PensionCalculator:
         total_btc = 0.0
         btc_accumulated = 0.0
         trad_accumulated = 0.0
-        projected_price = current_price if current_price > 0 else 85000.0
+        projected_price = current_price
 
         breakdown = []
         monthly_data = []
@@ -97,13 +90,13 @@ class PensionCalculator:
     def _calc_cagr(self, historical: list) -> float:
         """Calculate compound annual growth rate from price history."""
         if not historical or len(historical) < 30:
-            return 0.30  # Default 30% if no data
+            raise ValueError("Insufficient historical data to calculate CAGR")
 
         oldest_price = historical[0][1]
         newest_price = historical[-1][1]
         days_span = (historical[-1][0] - historical[0][0]) / (1000 * 86400)
 
         if days_span <= 0 or oldest_price <= 0:
-            return 0.30
+            raise ValueError("Invalid historical price data")
 
         return ((newest_price / oldest_price) ** (365 / days_span)) - 1

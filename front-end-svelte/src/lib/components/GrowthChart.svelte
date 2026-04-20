@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
+	import { i18n } from '$lib/i18n/index.svelte';
 
 	interface ComparisonData {
 		label: string;
@@ -65,9 +66,9 @@
 		}
 
 		const scenarios = [
-			{ label: 'Pesimista', btcPrice: 150000, borderDash: [6, 3] as number[], color: 'rgb(220, 100, 100)', glowColor: '#dc6464' },
-			{ label: 'Base', btcPrice: 500000, borderDash: [4, 2] as number[], color: 'rgb(234, 179, 8)', glowColor: '#eab308' },
-			{ label: 'Optimista', btcPrice: 1000000, borderDash: [] as number[], color: 'rgb(34, 197, 94)', glowColor: '#22c55e' }
+			{ label: i18n.t.pension.pessimistic, btcPrice: 150000, borderDash: [6, 3] as number[], color: 'rgb(220, 100, 100)', glowColor: '#dc6464' },
+			{ label: i18n.t.pension.base, btcPrice: 500000, borderDash: [4, 2] as number[], color: 'rgb(234, 179, 8)', glowColor: '#eab308' },
+			{ label: i18n.t.pension.optimistic, btcPrice: 1000000, borderDash: [] as number[], color: 'rgb(34, 197, 94)', glowColor: '#22c55e' }
 		];
 
 		const datasets = scenarios.map(s => {
@@ -111,7 +112,7 @@
 		}
 
 		datasets.push({
-			label: 'Meta',
+			label: i18n.t.pension.totalInvested,
 			data: goalData,
 			borderColor: 'rgb(100, 100, 100)',
 			backgroundColor: 'transparent',
@@ -177,7 +178,7 @@
 					x: {
 						title: {
 							display: true,
-							text: 'Años'
+							text: i18n.t.pension.years
 						},
 						ticks: {
 							stepSize: Math.ceil(years / 10) || 1
@@ -186,7 +187,7 @@
 					y: {
 						title: {
 							display: true,
-							text: 'Valor (USD)'
+							text: i18n.t.pension.finalValue + ' (USD)'
 						},
 						ticks: {
 							callback: (v) => formatUSD(Number(v))
@@ -222,7 +223,7 @@
 
 <div class="space-y-4">
 	<h3 class="text-lg font-semibold text-center">
-		{showComparison ? 'Comparación de escenarios' : 'Valor del portafolio BTC en el tiempo'}
+		{i18n.t.pension.scenarioProjection}
 	</h3>
 
 	<div class="relative w-full h-80">
@@ -230,8 +231,6 @@
 	</div>
 
 	<p class="text-xs text-muted-foreground text-center italic">
-		{showComparison 
-			? 'Compara tu estrategia con otras opciones. No es asesoría financiera.' 
-			: 'Precio interpolado linealmente desde el precio actual hasta la proyección. No es asesoría financiera.'}
+		{i18n.t.pension.disclaimer}
 	</p>
 </div>

@@ -105,7 +105,7 @@ export const es: Translations = {
     piggyBankCaption: 'Mismo dinero, futuro diferente',
     emptyState: 'Ingresá tu ahorro mensual y horizonte de tiempo para ver tu proyección de retiro.',
     resultsReady: '¡Acá está tu proyección!',
-    disclaimer: 'Esto no es consejo financiero. Basado en precios históricos, el futuro puede variar. Bitcoin es volátil — solo ahorrá lo que puedas permitirte.',
+    disclaimer: 'Esto no es consejo financiero. Basado en precios históricos, el futuro puede variar. Bitcoin es volátil, solo ahorrá lo que puedas permitirte.',
     errorFetch: 'Error al calcular proyección',
     scenarioTitle: '¿Y si el precio de Bitcoin sube?',
     scenarioSubtitle: 'Tres escenarios de precio para tu ahorro de 25 años',

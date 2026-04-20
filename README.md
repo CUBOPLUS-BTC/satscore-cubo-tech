@@ -9,7 +9,7 @@ Bitcoin financial toolkit for El Salvador and Latin America. Named after volcani
 | Name | Role | GitHub |
 |------|------|--------|
 | | Tech Lead | @wkatir |
-| | Tech | |
+| ivane009 | Tech | @ivane009 |
 | | Non-Tech Lead | |
 | | Non-Tech | |
 

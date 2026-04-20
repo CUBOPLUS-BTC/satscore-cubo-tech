@@ -1,5 +1,5 @@
 import { animate, stagger, inView, scroll, spring } from 'motion';
-import type { AnimationOptions, SpringOptions } from 'motion';
+import type { AnimationOptions } from 'motion';
 
 /**
  * Svelte action: animate an element on mount.
@@ -15,7 +15,7 @@ export function animateIn(
 		scale?: [number, number];
 		duration?: number;
 		delay?: number;
-		easing?: AnimationOptions['easing'];
+		ease?: AnimationOptions['ease'];
 	} = {}
 ) {
 	const {
@@ -25,7 +25,7 @@ export function animateIn(
 		scale,
 		duration = 0.5,
 		delay = 0,
-		easing = [0.25, 0.1, 0.25, 1],
+		ease = [0.25, 0.1, 0.25, 1],
 	} = params;
 
 	const keyframes: Record<string, [number, number]> = {};
@@ -34,7 +34,7 @@ export function animateIn(
 	if (x) keyframes.x = x;
 	if (scale) keyframes.scale = scale;
 
-	animate(node, keyframes, { duration, delay, easing: easing as number[] });
+	animate(node, keyframes as any, { duration, delay, ease });
 }
 
 /**
@@ -61,11 +61,11 @@ export function inViewReveal(
 		() => {
 			animate(
 				node,
-				{ opacity: [0, 1], y: [y, 0] },
-				{ duration, easing: [0.25, 0.1, 0.25, 1] }
+				{ opacity: [0, 1], y: [y, 0] } as any,
+				{ duration, ease: [0.25, 0.1, 0.25, 1] }
 			);
 		},
-		{ margin, amount: 0.2 }
+		{ margin: margin as any, amount: 0.2 }
 	);
 
 	return {
@@ -107,11 +107,11 @@ export function staggerChildren(
 
 	animate(
 		children as unknown as Element[],
-		{ opacity: [0, 1], y: [y, 0] },
+		{ opacity: [0, 1], y: [y, 0] } as any,
 		{
 			duration,
-			delay: stagger(staggerDelay, { start: delay }),
-			easing: [0.25, 0.1, 0.25, 1],
+			delay: stagger(staggerDelay, { startDelay: delay }),
+			ease: [0.25, 0.1, 0.25, 1],
 		}
 	);
 }
@@ -149,15 +149,15 @@ export function inViewStagger(
 		() => {
 			animate(
 				children as unknown as Element[],
-				{ opacity: [0, 1], y: [y, 0] },
+				{ opacity: [0, 1], y: [y, 0] } as any,
 				{
 					duration,
 					delay: stagger(staggerDelay),
-					easing: [0.25, 0.1, 0.25, 1],
+					ease: [0.25, 0.1, 0.25, 1],
 				}
 			);
 		},
-		{ margin, amount: 0.1 }
+		{ margin: margin as any, amount: 0.1 }
 	);
 
 	return {

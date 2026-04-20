@@ -16,6 +16,22 @@
 	import { animateIn, staggerChildren, pressScale } from '$lib/motion';
 	import Clock from 'phosphor-svelte/lib/Clock';
 	import Geo from '$lib/components/geo.svelte';
+	import PdfExportButton from '$lib/components/pdf-export-button.svelte';
+	import { exportRemittancePdf } from '$lib/utils/export-pdf';
+
+	const freqLabel: Record<string, string> = { monthly: 'Mensual', biweekly: 'Quincenal', weekly: 'Semanal' };
+
+	async function handleExportPdf() {
+		if (!result) return;
+		await exportRemittancePdf({
+			amountUsd,
+			frequency: freqLabel[frequency] ?? frequency,
+			bestChannel: result.best_channel,
+			savingsVsWorst: result.savings_vs_worst,
+			annualSavings: result.annual_savings,
+			channels: result.channels,
+		});
+	}
 
 	let amountUsd = $state(200);
 	let frequency = $state<string>('monthly');
@@ -139,6 +155,10 @@
 
 {#if result}
 	<div class="mt-8 space-y-6" use:animateIn={{ y: [30, 0], duration: 0.6 }}>
+		<div class="flex justify-end">
+			<PdfExportButton onclick={handleExportPdf} label="Exportar comparación" />
+		</div>
+
 		<!-- Impact message hero -->
 		{#if result.savings_vs_worst > 0}
 			<div class="rounded-2xl border-2 border-primary bg-primary/5 p-6 text-center space-y-2">

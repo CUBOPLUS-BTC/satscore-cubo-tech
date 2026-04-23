@@ -1,0 +1,1 @@
+# Magma test suite

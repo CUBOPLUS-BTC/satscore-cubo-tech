@@ -25,6 +25,7 @@ POST /notifications/render
 from __future__ import annotations
 
 from .renderer import NotificationRenderer
+from ..i18n import t
 
 _renderer = NotificationRenderer()
 
@@ -41,7 +42,7 @@ def handle_notification_templates(query: dict) -> tuple[dict, int]:
         locale = (query.get("locale") or "en").strip().lower()
 
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
 
         templates = _renderer.list_templates(category=category)
 
@@ -92,7 +93,7 @@ def handle_notification_preview(body: dict) -> tuple[dict, int]:
         if not template_id:
             return {"detail": "Missing required field: template_id"}, 400
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
 
         preview = _renderer.preview(template_id, locale)
         return preview, 200
@@ -124,7 +125,7 @@ def handle_notification_render(body: dict) -> tuple[dict, int]:
         if not template_id:
             return {"detail": "Missing required field: template_id"}, 400
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
         if not isinstance(data, dict):
             return {"detail": "Field 'data' must be an object."}, 400
         if fmt not in ("full", "plain", "html", "subject"):

@@ -8,6 +8,7 @@ the convention used throughout the Magma app.
 from .engine import MarketEngine
 from .history import PriceHistory
 from .signals import SignalEngine
+from ..i18n import t
 
 _engine = MarketEngine()
 _signal_engine = SignalEngine()
@@ -35,9 +36,9 @@ def handle_price_history(query: dict) -> tuple[dict, int]:
         interval = query.get("interval", "daily")
 
         if days < 1 or days > 365:
-            return {"detail": "days must be between 1 and 365"}, 400
+            return {"detail": t("market.days.range")}, 400
         if interval not in ("daily", "hourly"):
-            return {"detail": "interval must be 'daily' or 'hourly'"}, 400
+            return {"detail": t("market.interval.invalid")}, 400
 
         candles = _engine.get_price_history(days=days, interval=interval)
 
@@ -87,7 +88,7 @@ def handle_market_signals(body: dict) -> tuple[dict, int]:
                         "timestamp": c["timestamp"]} for c in candles]
 
         if len(prices) < 20:
-            return {"detail": "Need at least 20 price points"}, 400
+            return {"detail": t("market.prices.minimum")}, 400
 
         if mode == "summary":
             result = _signal_engine.get_signal_summary(prices)
@@ -96,10 +97,10 @@ def handle_market_signals(body: dict) -> tuple[dict, int]:
         elif mode == "backtest":
             signal_type = body.get("signal_type", "")
             if not signal_type:
-                return {"detail": "signal_type required for backtest mode"}, 400
+                return {"detail": t("market.signal_type.required")}, 400
             result = _signal_engine.backtest_signal(signal_type, prices)
         else:
-            return {"detail": "mode must be 'summary', 'score', or 'backtest'"}, 400
+            return {"detail": t("market.mode.invalid")}, 400
 
         return result, 200
 
@@ -197,7 +198,7 @@ def handle_price_analysis(body: dict) -> tuple[dict, int]:
 
         candles = _engine.get_price_history(days=min(days, 365))
         if not candles:
-            return {"detail": "No price data available"}, 503
+            return {"detail": t("market.no_price_data")}, 503
 
         price_dicts = [{"timestamp": c["timestamp"], "price": c["close"],
                         "volume": c.get("volume", 0)} for c in candles]

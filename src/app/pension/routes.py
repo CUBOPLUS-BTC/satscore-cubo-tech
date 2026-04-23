@@ -1,4 +1,5 @@
 from .calculator import PensionCalculator
+from ..i18n import t
 
 _calculator = PensionCalculator()
 
@@ -8,9 +9,9 @@ def handle_projection(body: dict) -> tuple[dict, int]:
     years = body.get("years", 0)
 
     if not monthly or monthly <= 0:
-        return {"detail": "monthly_saving_usd must be positive"}, 400
+        return {"detail": t("error.amount.negative")}, 400
     if not years or years <= 0 or years > 50:
-        return {"detail": "years must be between 1 and 50"}, 400
+        return {"detail": t("error.validation.range", field="years", min=1, max=50)}, 400
 
     try:
         projection = _calculator.project(float(monthly), int(years))

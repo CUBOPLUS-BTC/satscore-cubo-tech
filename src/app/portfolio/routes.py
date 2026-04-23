@@ -8,6 +8,7 @@ Authenticated routes receive pubkey as a parameter.
 from .tracker import PortfolioTracker
 from .optimizer import PortfolioOptimizer, CorrelationMatrix
 from .risk import RiskAnalyzer
+from ..i18n import t
 
 _tracker   = PortfolioTracker()
 _optimizer = PortfolioOptimizer()
@@ -57,11 +58,11 @@ def handle_portfolio_transaction(body: dict, pubkey: str) -> tuple[dict, int]:
         notes     = body.get("notes", "")
 
         if amount <= 0:
-            return {"detail": "amount must be positive"}, 400
+            return {"detail": t("portfolio.amount.positive")}, 400
         if price_usd <= 0:
-            return {"detail": "price_usd must be positive"}, 400
+            return {"detail": t("portfolio.price.positive")}, 400
         if tx_type not in ("buy", "sell", "transfer_in", "transfer_out", "fee"):
-            return {"detail": "invalid tx_type"}, 400
+            return {"detail": t("portfolio.tx_type.invalid")}, 400
 
         result = _tracker.record_transaction(
             pubkey, tx_type, asset, amount, price_usd, fee_usd, notes
@@ -87,7 +88,7 @@ def handle_portfolio_performance(query: dict, pubkey: str) -> tuple[dict, int]:
     try:
         period = query.get("period", "all")
         if period not in ("day", "week", "month", "year", "all"):
-            return {"detail": "period must be 'day', 'week', 'month', 'year', or 'all'"}, 400
+            return {"detail": t("portfolio.period.invalid")}, 400
 
         result = _tracker.get_performance(pubkey, period)
         return result, 200
@@ -114,9 +115,9 @@ def handle_portfolio_optimize(body: dict, pubkey: str) -> tuple[dict, int]:
         returns_series  = body.get("returns_series", {})
 
         if not assets:
-            return {"detail": "assets list required"}, 400
+            return {"detail": t("portfolio.assets.required")}, 400
         if len(assets) != len(expected_returns):
-            return {"detail": "assets and expected_returns must have same length"}, 400
+            return {"detail": t("portfolio.assets.mismatch")}, 400
 
         if method == "basic":
             result = _optimizer.optimize_allocation(assets, expected_returns, risk_tolerance)
@@ -152,7 +153,7 @@ def handle_portfolio_optimize(body: dict, pubkey: str) -> tuple[dict, int]:
             result = _optimizer.risk_parity_allocation(assets, vols)
 
         else:
-            return {"detail": "method must be 'basic', 'min_variance', 'max_sharpe', or 'risk_parity'"}, 400
+            return {"detail": t("portfolio.method.invalid")}, 400
 
         return result, 200
     except Exception as e:
@@ -173,7 +174,7 @@ def handle_portfolio_risk(pubkey: str) -> tuple[dict, int]:
         }
 
         if not portfolio_alloc:
-            return {"detail": "No holdings found"}, 404
+            return {"detail": t("portfolio.no_holdings")}, 404
 
         # Stress test against all scenarios
         stress_results = _risk.stress_test(portfolio_alloc)
@@ -185,10 +186,7 @@ def handle_portfolio_risk(pubkey: str) -> tuple[dict, int]:
             "portfolio_allocation": portfolio_alloc,
             "diversification_score": div_score,
             "stress_tests":          stress_results,
-            "risk_note": (
-                "Stress test results show estimated portfolio impact "
-                "under each predefined market scenario."
-            ),
+            "risk_note": t("portfolio.risk_note"),
         }, 200
     except Exception as e:
         return {"detail": str(e)}, 500
@@ -202,7 +200,7 @@ def handle_portfolio_cost_basis(query: dict, pubkey: str) -> tuple[dict, int]:
         asset  = query.get("asset", "BTC")
         method = query.get("method", "fifo")
         if method not in ("fifo", "lifo", "average"):
-            return {"detail": "method must be 'fifo', 'lifo', or 'average'"}, 400
+            return {"detail": t("portfolio.cost_method.invalid")}, 400
         result = _tracker.get_cost_basis(pubkey, asset, method)
         return result, 200
     except Exception as e:
@@ -237,7 +235,7 @@ def handle_portfolio_rebalance(body: dict, pubkey: str) -> tuple[dict, int]:
     try:
         target = body.get("target_allocation", {})
         if not target:
-            return {"detail": "target_allocation required"}, 400
+            return {"detail": t("portfolio.target.required")}, 400
 
         current_alloc = _tracker.get_allocation(pubkey)
         current = {

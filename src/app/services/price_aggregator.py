@@ -44,3 +44,12 @@ class PriceAggregator:
             "deviation": deviation,
             "has_warning": len(prices) < 2,
         }
+
+    def get_current_price(self, asset: str = "BTC") -> float:
+        """Return the current price in USD for the given asset.
+
+        Currently only BTC is supported — delegates to ``get_verified_price``.
+        """
+        if asset.upper() != "BTC":
+            raise PriceUnavailableError(f"Unsupported asset: {asset}")
+        return self.get_verified_price()["price_usd"]

@@ -1,6 +1,7 @@
 """Routes for the Liquid Network module."""
 
 from .engine import LiquidAnalyzer
+from ..i18n import t
 
 _analyzer = LiquidAnalyzer()
 
@@ -11,7 +12,7 @@ def handle_liquid_overview(body: dict) -> tuple[dict, int]:
         result = _analyzer.get_network_overview()
         return result, 200
     except Exception as exc:
-        return {"detail": f"Could not fetch Liquid overview: {exc}"}, 502
+        return {"detail": t("liquid.overview.failed", error=str(exc))}, 502
 
 
 def handle_liquid_assets(body: dict) -> tuple[dict, int]:
@@ -20,7 +21,7 @@ def handle_liquid_assets(body: dict) -> tuple[dict, int]:
         result = _analyzer.get_assets_info()
         return result, 200
     except Exception as exc:
-        return {"detail": f"Could not fetch Liquid assets: {exc}"}, 502
+        return {"detail": t("liquid.assets.failed", error=str(exc))}, 502
 
 
 def handle_liquid_compare(body: dict) -> tuple[dict, int]:
@@ -29,7 +30,7 @@ def handle_liquid_compare(body: dict) -> tuple[dict, int]:
         result = _analyzer.compare_with_other_layers()
         return result, 200
     except Exception as exc:
-        return {"detail": f"Could not generate comparison: {exc}"}, 502
+        return {"detail": t("liquid.compare.failed", error=str(exc))}, 502
 
 
 def handle_liquid_peg(body: dict) -> tuple[dict, int]:
@@ -38,7 +39,7 @@ def handle_liquid_peg(body: dict) -> tuple[dict, int]:
         result = _analyzer.get_peg_info()
         return result, 200
     except Exception as exc:
-        return {"detail": f"Could not fetch peg info: {exc}"}, 502
+        return {"detail": t("liquid.peg.failed", error=str(exc))}, 502
 
 
 def handle_liquid_recommend(body: dict, query: dict) -> tuple[dict, int]:
@@ -54,23 +55,23 @@ def handle_liquid_recommend(body: dict, query: dict) -> tuple[dict, int]:
     privacy_raw = body.get("privacy") or query.get("privacy", "normal")
 
     if amount_raw is None:
-        return {"detail": "amount_usd is required"}, 400
+        return {"detail": t("liquid.amount.required")}, 400
 
     try:
         amount_usd = float(amount_raw)
     except (TypeError, ValueError):
-        return {"detail": "amount_usd must be a number"}, 400
+        return {"detail": t("liquid.amount.invalid")}, 400
 
     if amount_usd <= 0:
-        return {"detail": "amount_usd must be positive"}, 400
+        return {"detail": t("liquid.amount.positive")}, 400
 
     urgency = str(urgency_raw).strip().lower()
     if urgency not in ("low", "medium", "high", "instant"):
-        return {"detail": "urgency must be one of: low, medium, high, instant"}, 400
+        return {"detail": t("liquid.urgency.invalid")}, 400
 
     privacy = str(privacy_raw).strip().lower()
     if privacy not in ("normal", "high", "confidential"):
-        return {"detail": "privacy must be one of: normal, high, confidential"}, 400
+        return {"detail": t("liquid.privacy.invalid")}, 400
 
     try:
         result = _analyzer.recommend_layer(amount_usd, urgency, privacy)
@@ -78,4 +79,4 @@ def handle_liquid_recommend(body: dict, query: dict) -> tuple[dict, int]:
     except ValueError as exc:
         return {"detail": str(exc)}, 422
     except Exception as exc:
-        return {"detail": f"Recommendation failed: {exc}"}, 502
+        return {"detail": t("liquid.recommend.failed", error=str(exc))}, 502

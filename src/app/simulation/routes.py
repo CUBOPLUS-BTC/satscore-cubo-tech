@@ -17,6 +17,7 @@ from .backtest import (
     AccumulationStrategy,
 )
 from .scenarios import ScenarioAnalyzer, PREDEFINED_SCENARIOS
+from ..i18n import t
 
 _mc       = MonteCarloEngine(seed=42)
 _backtest = BacktestEngine()
@@ -46,11 +47,11 @@ def handle_simulate_portfolio(body: dict) -> tuple[dict, int]:
         })
 
         if initial < 0:
-            return {"detail": "initial must be non-negative"}, 400
+            return {"detail": t("simulation.initial.nonneg")}, 400
         if monthly < 0:
-            return {"detail": "monthly_contribution must be non-negative"}, 400
+            return {"detail": t("simulation.monthly.nonneg")}, 400
         if years < 1 or years > 50:
-            return {"detail": "years must be between 1 and 50"}, 400
+            return {"detail": t("simulation.years.range")}, 400
 
         result = _mc.simulate_portfolio_growth(
             initial=initial,
@@ -91,11 +92,11 @@ def handle_simulate_dca(body: dict) -> tuple[dict, int]:
         }
 
         if amount <= 0:
-            return {"detail": "amount must be positive"}, 400
+            return {"detail": t("simulation.amount.positive")}, 400
         if frequency not in ("daily", "weekly", "monthly"):
-            return {"detail": "frequency must be 'daily', 'weekly', or 'monthly'"}, 400
+            return {"detail": t("simulation.frequency.invalid")}, 400
         if years < 1 or years > 30:
-            return {"detail": "years must be between 1 and 30"}, 400
+            return {"detail": t("simulation.years.range_30")}, 400
 
         result = _mc.simulate_dca_outcomes(
             amount=amount,
@@ -127,9 +128,9 @@ def handle_backtest(body: dict) -> tuple[dict, int]:
         capital = float(body.get("capital", 10_000))
 
         if not prices:
-            return {"detail": "prices list is required"}, 400
+            return {"detail": t("simulation.prices.required")}, 400
         if len(prices) < 20:
-            return {"detail": "Need at least 20 price data points"}, 400
+            return {"detail": t("simulation.prices.minimum")}, 400
 
         compare = body.get("compare", False)
 
@@ -153,7 +154,7 @@ def handle_backtest(body: dict) -> tuple[dict, int]:
 
         strategy = _build_strategy(strategy_name, params, capital, prices)
         if strategy is None:
-            return {"detail": f"Unknown strategy: {strategy_name}"}, 400
+            return {"detail": t("simulation.strategy.unknown", name=strategy_name)}, 400
 
         result = _backtest.run(strategy, prices, capital)
         return result.to_dict(), 200
@@ -238,11 +239,11 @@ def handle_scenario_analysis(body: dict) -> tuple[dict, int]:
             scenario_name   = body.get("scenario")
             custom_scenario = body.get("custom_scenario")
             if not scenario_name and not custom_scenario:
-                return {"detail": "scenario name or custom_scenario required for single mode"}, 400
+                return {"detail": t("simulation.scenario.required")}, 400
             result = _scenario.analyze_scenario(portfolio, scenario_name, custom_scenario)
             return result, 200
 
-        return {"detail": "mode must be 'single', 'stress_test', or 'list'"}, 400
+        return {"detail": t("simulation.mode.invalid")}, 400
 
     except Exception as e:
         return {"detail": str(e)}, 500
@@ -269,11 +270,11 @@ def handle_monte_carlo(body: dict) -> tuple[dict, int]:
         n_paths       = min(int(body.get("n_paths", 500)), 2000)
 
         if current_price <= 0:
-            return {"detail": "current_price must be positive"}, 400
+            return {"detail": t("simulation.price.positive")}, 400
         if volatility <= 0 or volatility > 5:
-            return {"detail": "volatility must be between 0 and 5"}, 400
+            return {"detail": t("simulation.volatility.range")}, 400
         if days < 1 or days > 3650:
-            return {"detail": "days must be between 1 and 3650"}, 400
+            return {"detail": t("simulation.days.range")}, 400
 
         result = _mc.simulate_price_path(
             current_price=current_price,
@@ -326,9 +327,9 @@ def handle_retirement_sim(body: dict) -> tuple[dict, int]:
         }
 
         if params["current_age"] >= params["retirement_age"]:
-            return {"detail": "current_age must be less than retirement_age"}, 400
+            return {"detail": t("simulation.age.invalid")}, 400
         if params["retirement_age"] >= params["life_expectancy"]:
-            return {"detail": "retirement_age must be less than life_expectancy"}, 400
+            return {"detail": t("simulation.retire.invalid")}, 400
 
         result = _mc.simulate_retirement(params=params, n_sims=n_sims)
         return result, 200
@@ -359,9 +360,9 @@ def handle_probability_of_ruin(body: dict) -> tuple[dict, int]:
         })
 
         if portfolio_value <= 0:
-            return {"detail": "portfolio_value must be positive"}, 400
+            return {"detail": t("simulation.portfolio.positive")}, 400
         if monthly_withdrawals <= 0:
-            return {"detail": "monthly_withdrawals must be positive"}, 400
+            return {"detail": t("simulation.withdrawals.positive")}, 400
 
         result = _mc.probability_of_ruin(
             portfolio_value=portfolio_value,

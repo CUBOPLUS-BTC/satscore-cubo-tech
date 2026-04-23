@@ -35,6 +35,7 @@ from .glossary import GLOSSARY, search_glossary, get_by_category, get_by_difficu
 from .lessons import LESSONS, get_lesson, list_lessons
 from .units import list_units, UNITS
 from .progress import EducationProgressManager
+from ..i18n import t
 
 _progress = EducationProgressManager()
 
@@ -62,7 +63,7 @@ def handle_glossary(query: dict) -> tuple[dict, int]:
         locale = (query.get("locale") or "en").strip().lower()
 
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
 
         # Start with all entries
         if q:
@@ -138,7 +139,7 @@ def handle_lesson_list(query: dict) -> tuple[dict, int]:
         locale = (query.get("locale") or "en").strip().lower()
 
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
 
         lessons = list_lessons(category=category, difficulty=difficulty)
 
@@ -190,7 +191,7 @@ def handle_lesson_detail(query: dict) -> tuple[dict, int]:
         if not lesson_id:
             return {"detail": "Missing required parameter: id"}, 400
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
 
         lesson = get_lesson(lesson_id)
         if lesson is None:
@@ -253,7 +254,7 @@ def handle_quiz(body: dict, pubkey: str | None = None) -> tuple[dict, int]:
         if not isinstance(answers, list):
             return {"detail": "Field 'answers' must be a list of integers."}, 400
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
 
         lesson = get_lesson(lesson_id)
         if lesson is None:
@@ -365,7 +366,7 @@ def handle_units(query: dict, pubkey: str | None = None) -> tuple[dict, int]:
     try:
         locale = (query.get("locale") or "en").strip().lower()
         if locale not in ("en", "es"):
-            return {"detail": "Invalid locale. Use 'en' or 'es'."}, 400
+            return {"detail": t("locale.invalid")}, 400
 
         units = list_units(locale)
 
@@ -441,7 +442,7 @@ def handle_units(query: dict, pubkey: str | None = None) -> tuple[dict, int]:
 def handle_progress_get(pubkey: str) -> tuple[dict, int]:
     """GET /education/progress — full gamification state for the user."""
     if not pubkey:
-        return {"detail": "Authentication required"}, 401
+        return {"detail": t("error.unauthorized")}, 401
     try:
         state = _progress.get_state(pubkey)
         statuses = _progress.lesson_statuses(pubkey)
@@ -456,7 +457,7 @@ def handle_progress_get(pubkey: str) -> tuple[dict, int]:
 def handle_progress_lose_heart(pubkey: str, body: dict) -> tuple[dict, int]:
     """POST /education/progress/lose-heart — spend 1 heart (wrong answer)."""
     if not pubkey:
-        return {"detail": "Authentication required"}, 401
+        return {"detail": t("error.unauthorized")}, 401
     try:
         count = 1
         if isinstance(body, dict) and isinstance(body.get("count"), int):

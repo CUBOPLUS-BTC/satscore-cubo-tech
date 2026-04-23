@@ -34,6 +34,7 @@ POST /stats/regression
 from __future__ import annotations
 
 from .calculator import StatisticsCalculator
+from ..i18n import t
 
 _calc = StatisticsCalculator()
 
@@ -56,20 +57,20 @@ def handle_stats_analyze(body: dict) -> tuple[dict, int]:
     try:
         raw_data = body.get("data")
         if raw_data is None:
-            return {"detail": "Missing required field: data"}, 400
+            return {"detail": t("stats.data.required")}, 400
         if not isinstance(raw_data, list):
-            return {"detail": "Field 'data' must be a list of numbers."}, 400
+            return {"detail": t("stats.data.list")}, 400
         if len(raw_data) == 0:
-            return {"detail": "Field 'data' must not be empty."}, 400
+            return {"detail": t("stats.data.empty")}, 400
         if len(raw_data) > _MAX_DATA_POINTS:
             return {
-                "detail": f"data exceeds maximum of {_MAX_DATA_POINTS} points."
+                "detail": t("stats.data.too_large", max=_MAX_DATA_POINTS)
             }, 400
 
         try:
             data = [float(x) for x in raw_data]
         except (TypeError, ValueError) as exc:
-            return {"detail": f"data contains non-numeric values: {exc}"}, 400
+            return {"detail": t("stats.data.non_numeric", error=str(exc))}, 400
 
         # Optional parameters
         include = body.get("include") or [
@@ -77,7 +78,7 @@ def handle_stats_analyze(body: dict) -> tuple[dict, int]:
             "smoothing", "confidence_interval",
         ]
         if not isinstance(include, list):
-            return {"detail": "Field 'include' must be a list of strings."}, 400
+            return {"detail": t("stats.include.list")}, 400
 
         alpha = float(body.get("alpha") or 0.1)
         window = int(body.get("window") or min(20, max(2, len(data) // 5)))
@@ -208,29 +209,29 @@ def handle_stats_correlation(body: dict) -> tuple[dict, int]:
         y_raw = body.get("y")
 
         if x_raw is None:
-            return {"detail": "Missing required field: x"}, 400
+            return {"detail": t("stats.x.required")}, 400
         if y_raw is None:
-            return {"detail": "Missing required field: y"}, 400
+            return {"detail": t("stats.y.required")}, 400
         if not isinstance(x_raw, list) or not isinstance(y_raw, list):
-            return {"detail": "Fields 'x' and 'y' must be lists."}, 400
+            return {"detail": t("stats.xy.list")}, 400
         if len(x_raw) != len(y_raw):
             return {
-                "detail": f"x (len={len(x_raw)}) and y (len={len(y_raw)}) must have equal length."
+                "detail": t("stats.xy.length", x_len=len(x_raw), y_len=len(y_raw))
             }, 400
         if len(x_raw) < 2:
-            return {"detail": "At least 2 data points are required for correlation."}, 400
+            return {"detail": t("stats.xy.minimum_2")}, 400
         if len(x_raw) > _MAX_DATA_POINTS:
-            return {"detail": f"Data exceeds {_MAX_DATA_POINTS} points."}, 400
+            return {"detail": t("stats.xy.too_large", max=_MAX_DATA_POINTS)}, 400
 
         try:
             x = [float(v) for v in x_raw]
             y = [float(v) for v in y_raw]
         except (TypeError, ValueError) as exc:
-            return {"detail": f"Non-numeric values: {exc}"}, 400
+            return {"detail": t("stats.xy.non_numeric", error=str(exc))}, 400
 
         methods = body.get("methods") or ["pearson", "spearman"]
         if not isinstance(methods, list):
-            return {"detail": "Field 'methods' must be a list."}, 400
+            return {"detail": t("stats.methods.list")}, 400
 
         include_regression = body.get("include_regression", True)
         if not isinstance(include_regression, bool):
@@ -300,30 +301,30 @@ def handle_stats_regression(body: dict) -> tuple[dict, int]:
         y_raw = body.get("y")
 
         if x_raw is None:
-            return {"detail": "Missing required field: x"}, 400
+            return {"detail": t("stats.x.required")}, 400
         if y_raw is None:
-            return {"detail": "Missing required field: y"}, 400
+            return {"detail": t("stats.y.required")}, 400
         if not isinstance(x_raw, list) or not isinstance(y_raw, list):
-            return {"detail": "Fields 'x' and 'y' must be lists."}, 400
+            return {"detail": t("stats.xy.list")}, 400
         if len(x_raw) != len(y_raw):
             return {
-                "detail": f"x (len={len(x_raw)}) and y (len={len(y_raw)}) must match."
+                "detail": t("stats.xy.length", x_len=len(x_raw), y_len=len(y_raw))
             }, 400
         if len(x_raw) < 3:
-            return {"detail": "At least 3 data points are required for regression."}, 400
+            return {"detail": t("stats.xy.minimum_3")}, 400
         if len(x_raw) > _MAX_DATA_POINTS:
-            return {"detail": f"Data exceeds {_MAX_DATA_POINTS} points."}, 400
+            return {"detail": t("stats.xy.too_large", max=_MAX_DATA_POINTS)}, 400
 
         try:
             x = [float(v) for v in x_raw]
             y = [float(v) for v in y_raw]
         except (TypeError, ValueError) as exc:
-            return {"detail": f"Non-numeric values: {exc}"}, 400
+            return {"detail": t("stats.xy.non_numeric", error=str(exc))}, 400
 
         regression_type = (body.get("type") or "linear").strip().lower()
         if regression_type not in ("linear", "log_linear", "power_law"):
             return {
-                "detail": "Invalid type. Use 'linear', 'log_linear', or 'power_law'."
+                "detail": t("stats.regression.type_invalid")
             }, 400
 
         bootstrap_ci = body.get("bootstrap_ci", False)
@@ -345,7 +346,7 @@ def handle_stats_regression(body: dict) -> tuple[dict, int]:
             else:  # power_law
                 reg_result = _calc.power_law_fit(x, y)
         except (ValueError, ZeroDivisionError) as exc:
-            return {"detail": f"Regression failed: {exc}"}, 400
+            return {"detail": t("stats.regression.failed", error=str(exc))}, 400
 
         # Remove large arrays to keep response manageable
         predicted = reg_result.pop("predicted", None)

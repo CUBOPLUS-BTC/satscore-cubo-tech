@@ -1,6 +1,7 @@
 from .projector import SavingsProjector
 from .tracker import SavingsTracker
 from ..validation import validate_pubkey, validate_amount
+from ..i18n import t
 
 _projector = SavingsProjector()
 _tracker = SavingsTracker()
@@ -13,9 +14,9 @@ def handle_projection(body: dict) -> tuple[dict, int]:
         years = int(body.get("years", 10))
 
         if monthly_usd <= 0:
-            return {"detail": "monthly_usd must be positive"}, 400
+            return {"detail": t("error.amount.negative")}, 400
         if years < 1 or years > 50:
-            return {"detail": "years must be between 1 and 50"}, 400
+            return {"detail": t("error.validation.range", field="years", min=1, max=50)}, 400
 
         result = _projector.project(monthly_usd=monthly_usd, years=years)
         return result, 200
@@ -27,13 +28,13 @@ def handle_create_goal(body: dict, pubkey: str) -> tuple[dict, int]:
     """POST /savings/goal — Requires auth."""
     try:
         if not validate_pubkey(pubkey):
-            return {"detail": "Invalid pubkey"}, 400
+            return {"detail": t("auth.pubkey.invalid")}, 400
 
         monthly_target = float(body.get("monthly_target_usd", 0))
         target_years = int(body.get("target_years", 10))
 
         if not validate_amount(monthly_target, min_val=1):
-            return {"detail": "monthly_target_usd must be positive"}, 400
+            return {"detail": t("error.amount.negative")}, 400
 
         result = _tracker.create_goal(pubkey, monthly_target, target_years)
         return result, 200
@@ -45,12 +46,12 @@ def handle_record_deposit(body: dict, pubkey: str) -> tuple[dict, int]:
     """POST /savings/deposit — Requires auth."""
     try:
         if not validate_pubkey(pubkey):
-            return {"detail": "Invalid pubkey"}, 400
+            return {"detail": t("auth.pubkey.invalid")}, 400
 
         amount_usd = float(body.get("amount_usd", 0))
 
         if not validate_amount(amount_usd, min_val=1):
-            return {"detail": "amount_usd must be positive"}, 400
+            return {"detail": t("error.amount.negative")}, 400
 
         result = _tracker.record_deposit(pubkey, amount_usd)
         return result, 200

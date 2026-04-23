@@ -1,6 +1,7 @@
 """Routes for the Bitcoin address scoring module."""
 
 from .analyzer import AddressAnalyzer, validate_bitcoin_address
+from ..i18n import t
 
 _analyzer = AddressAnalyzer()
 
@@ -15,10 +16,10 @@ def handle_score(body: dict) -> tuple[dict, int]:
     """
     address = body.get("address", "").strip()
     if not address:
-        return {"detail": "address is required"}, 400
+        return {"detail": t("scoring.address.required")}, 400
 
     if not validate_bitcoin_address(address):
-        return {"detail": f"Invalid Bitcoin address format: {address!r}"}, 422
+        return {"detail": t("scoring.address.invalid", address=address)}, 422
 
     try:
         result = _analyzer.analyze(address)
@@ -28,7 +29,7 @@ def handle_score(body: dict) -> tuple[dict, int]:
     except RuntimeError as exc:
         return {"detail": str(exc)}, 502
     except Exception as exc:
-        return {"detail": f"Analysis failed: {exc}"}, 500
+        return {"detail": t("scoring.analysis.failed", error=str(exc))}, 500
 
 
 def handle_score_summary(query: dict) -> tuple[dict, int]:
@@ -39,10 +40,10 @@ def handle_score_summary(query: dict) -> tuple[dict, int]:
     """
     address = query.get("address", "").strip()
     if not address:
-        return {"detail": "address query parameter is required"}, 400
+        return {"detail": t("scoring.address_query.required")}, 400
 
     if not validate_bitcoin_address(address):
-        return {"detail": f"Invalid Bitcoin address format: {address!r}"}, 422
+        return {"detail": t("scoring.address.invalid", address=address)}, 422
 
     try:
         result = _analyzer.analyze(address)
@@ -61,4 +62,4 @@ def handle_score_summary(query: dict) -> tuple[dict, int]:
     except RuntimeError as exc:
         return {"detail": str(exc)}, 502
     except Exception as exc:
-        return {"detail": f"Analysis failed: {exc}"}, 500
+        return {"detail": t("scoring.analysis.failed", error=str(exc))}, 500

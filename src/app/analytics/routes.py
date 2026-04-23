@@ -13,6 +13,7 @@ Endpoints:
 from .engine import AnalyticsEngine
 from .aggregator import DataAggregator
 from ..validation import validate_pubkey
+from ..i18n import t
 
 _engine = AnalyticsEngine()
 _aggregator = DataAggregator()
@@ -28,7 +29,7 @@ def handle_user_analytics(pubkey: str) -> tuple[dict, int]:
     """
     try:
         if not validate_pubkey(pubkey):
-            return {"detail": "Invalid pubkey"}, 400
+            return {"detail": t("auth.pubkey.invalid")}, 400
 
         activity = _engine.get_user_activity(pubkey, days=30)
         dca = _aggregator.compute_dca_performance(pubkey)
@@ -86,7 +87,7 @@ def handle_dca_performance(pubkey: str) -> tuple[dict, int]:
     """
     try:
         if not validate_pubkey(pubkey):
-            return {"detail": "Invalid pubkey"}, 400
+            return {"detail": t("auth.pubkey.invalid")}, 400
 
         performance = _aggregator.compute_dca_performance(pubkey)
         volatility = _aggregator.compute_volatility_impact(pubkey)

@@ -1,6 +1,7 @@
 """Routes for the Lightning Network stats module."""
 
 from .stats import LightningAnalyzer
+from ..i18n import t
 
 _analyzer = LightningAnalyzer()
 
@@ -11,7 +12,7 @@ def handle_lightning_overview(body: dict) -> tuple[dict, int]:
         result = _analyzer.get_network_overview()
         return result, 200
     except Exception as exc:
-        return {"detail": f"Could not fetch Lightning overview: {exc}"}, 502
+        return {"detail": t("lightning.overview.failed", error=str(exc))}, 502
 
 
 def handle_lightning_compare(body: dict) -> tuple[dict, int]:
@@ -26,7 +27,7 @@ def handle_lightning_compare(body: dict) -> tuple[dict, int]:
             "adoption":    adoption,
         }, 200
     except Exception as exc:
-        return {"detail": f"Could not generate comparison: {exc}"}, 502
+        return {"detail": t("lightning.compare.failed", error=str(exc))}, 502
 
 
 def handle_lightning_recommend(body: dict, query: dict) -> tuple[dict, int]:
@@ -42,21 +43,21 @@ def handle_lightning_recommend(body: dict, query: dict) -> tuple[dict, int]:
 
     if amount_raw is None:
         return {
-            "detail": "amount_usd is required (body or query parameter)"
+            "detail": t("lightning.amount.required")
         }, 400
 
     try:
         amount_usd = float(amount_raw)
     except (TypeError, ValueError):
-        return {"detail": "amount_usd must be a number"}, 400
+        return {"detail": t("lightning.amount.invalid")}, 400
 
     if amount_usd <= 0:
-        return {"detail": "amount_usd must be positive"}, 400
+        return {"detail": t("lightning.amount.positive")}, 400
 
     urgency = str(urgency_raw).strip().lower()
     if urgency not in ("low", "medium", "high", "instant"):
         return {
-            "detail": 'urgency must be one of: low, medium, high, instant'
+            "detail": t("lightning.urgency.invalid")
         }, 400
 
     try:
@@ -65,4 +66,4 @@ def handle_lightning_recommend(body: dict, query: dict) -> tuple[dict, int]:
     except ValueError as exc:
         return {"detail": str(exc)}, 422
     except Exception as exc:
-        return {"detail": f"Recommendation failed: {exc}"}, 502
+        return {"detail": t("lightning.recommend.failed", error=str(exc))}, 502

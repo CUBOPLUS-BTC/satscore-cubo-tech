@@ -13,6 +13,7 @@ from typing import Optional
 from .dashboard import AdminDashboard
 from .users import UserManager
 from .system import SystemAdmin
+from ..i18n import t
 
 
 # ---------------------------------------------------------------------------
@@ -33,15 +34,15 @@ def _require_admin(pubkey: Optional[str]) -> Optional[tuple]:
     Returns None if the caller is authorised.
     """
     if not pubkey:
-        return {"detail": "Authentication required"}, 401
+        return {"detail": t("error.unauthorized")}, 401
 
     admin_keys = _get_admin_pubkeys()
     if not admin_keys:
         # No admin keys configured — deny all admin access
-        return {"detail": "Admin access not configured"}, 403
+        return {"detail": t("admin.access.not_configured")}, 403
 
     if pubkey.lower() not in admin_keys:
-        return {"detail": "Admin access denied"}, 403
+        return {"detail": t("admin.access.denied")}, 403
 
     return None  # Authorised
 
@@ -143,12 +144,12 @@ def handle_admin_user_detail(query: dict) -> tuple:
 
     target = query.get("target_pubkey", "").strip()
     if not target:
-        return {"detail": "target_pubkey is required"}, 400
+        return {"detail": t("admin.target.required")}, 400
 
     detail = _users.get_user_detail(target)
     if "error" in detail:
         if detail["error"] == "user_not_found":
-            return {"detail": "User not found"}, 404
+            return {"detail": t("admin.user.not_found")}, 404
         return detail, 500
 
     # Also attach activity and risk score
@@ -173,7 +174,7 @@ def handle_admin_user_activity(query: dict) -> tuple:
     days   = _safe_int(query.get("days", 30), 1, 365, 30)
 
     if not target:
-        return {"detail": "target_pubkey is required"}, 400
+        return {"detail": t("admin.target.required")}, 400
 
     result = _users.get_user_activity(target, days=days)
     return result, 200
@@ -245,7 +246,7 @@ def handle_admin_user_ban(body: dict) -> tuple:
     duration = _safe_int(body.get("duration_seconds", 0), 0, 86400 * 365, 0)
 
     if not target:
-        return {"detail": "target_pubkey is required"}, 400
+        return {"detail": t("admin.target.required")}, 400
 
     if action == "unban":
         result = _users.unban_user(target, unbanned_by=pubkey)
@@ -276,7 +277,7 @@ def handle_admin_user_sessions(body: dict) -> tuple:
     token  = (body.get("token") or "").strip()
 
     if not target:
-        return {"detail": "target_pubkey is required"}, 400
+        return {"detail": t("admin.target.required")}, 400
 
     if action == "revoke_all":
         count = _users.revoke_all_sessions(target)
@@ -284,11 +285,11 @@ def handle_admin_user_sessions(body: dict) -> tuple:
 
     if action == "revoke":
         if not token:
-            return {"detail": "token is required for action=revoke"}, 400
+            return {"detail": t("admin.token.required")}, 400
         ok = _users.revoke_session(target, token)
         return {"target_pubkey": target, "revoked": ok}, 200
 
-    return {"detail": f"Unknown action: {action!r}"}, 400
+    return {"detail": t("admin.action.unknown", action=action)}, 400
 
 
 def handle_admin_config(body: dict) -> tuple:
@@ -313,7 +314,7 @@ def handle_admin_config(body: dict) -> tuple:
         value = body.get("value")
 
         if not key:
-            return {"detail": "key is required for action=set"}, 400
+            return {"detail": t("admin.key.required")}, 400
 
         result = _system.update_config(key, value)
         if "error" in result:
@@ -321,7 +322,7 @@ def handle_admin_config(body: dict) -> tuple:
 
         return result, 200
 
-    return {"detail": f"Unknown action: {action!r}"}, 400
+    return {"detail": t("admin.action.unknown", action=action)}, 400
 
 
 def handle_admin_maintenance(body: dict) -> tuple:
@@ -352,12 +353,12 @@ def handle_admin_export_user(body: dict) -> tuple:
 
     target = (body.get("target_pubkey") or "").strip()
     if not target:
-        return {"detail": "target_pubkey is required"}, 400
+        return {"detail": t("admin.target.required")}, 400
 
     result = _users.export_user_data(target)
     if "error" in result:
         if result["error"] == "user_not_found":
-            return {"detail": "User not found"}, 404
+            return {"detail": t("admin.user.not_found")}, 404
         return result, 500
 
     return result, 200
@@ -379,10 +380,10 @@ def handle_admin_delete_user(body: dict) -> tuple:
     confirm = (body.get("confirm") or "").strip()
 
     if not target:
-        return {"detail": "target_pubkey is required"}, 400
+        return {"detail": t("admin.target.required")}, 400
 
     if confirm != "DELETE":
-        return {"detail": "Set confirm='DELETE' to confirm irreversible deletion"}, 400
+        return {"detail": t("admin.delete.confirm")}, 400
 
     result = _users.delete_user_data(target, deleted_by=pubkey)
     if "error" in result:

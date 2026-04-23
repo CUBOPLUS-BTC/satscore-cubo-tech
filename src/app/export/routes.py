@@ -12,6 +12,7 @@ Endpoints:
 
 from .exporter import DataExporter
 from ..validation import validate_pubkey
+from ..i18n import t
 
 _exporter = DataExporter()
 
@@ -37,7 +38,7 @@ def handle_export_data(body: dict, pubkey: str) -> tuple[dict, int]:
     """
     try:
         if not validate_pubkey(pubkey):
-            return {"detail": "Invalid pubkey"}, 400
+            return {"detail": t("export.pubkey.invalid")}, 400
 
         fmt = _check_format(body.get("format", "json"))
         content = _exporter.export_user_data(pubkey, format=fmt)
@@ -63,14 +64,14 @@ def handle_export_deposits(query: dict, pubkey: str) -> tuple[dict, int]:
     """
     try:
         if not validate_pubkey(pubkey):
-            return {"detail": "Invalid pubkey"}, 400
+            return {"detail": t("export.pubkey.invalid")}, 400
 
         fmt = _check_format(query.get("format", "csv"))
         try:
             date_from = int(query.get("date_from", 0) or 0)
             date_to = int(query.get("date_to", 0) or 0)
         except (ValueError, TypeError):
-            return {"detail": "date_from and date_to must be integers"}, 400
+            return {"detail": t("export.dates.integer")}, 400
 
         content = _exporter.export_deposit_history(
             pubkey,
@@ -113,30 +114,30 @@ def handle_export_report(body: dict, pubkey: str) -> tuple[dict, int]:
 
         if report_type == "savings":
             if not validate_pubkey(pubkey):
-                return {"detail": "Invalid pubkey"}, 400
+                return {"detail": t("export.pubkey.invalid")}, 400
             content = _exporter.export_savings_report(pubkey, format=fmt)
 
         elif report_type == "statement":
             if not validate_pubkey(pubkey):
-                return {"detail": "Invalid pubkey"}, 400
+                return {"detail": t("export.pubkey.invalid")}, 400
             try:
                 year = int(body.get("year", 0))
                 month = int(body.get("month", 0))
             except (ValueError, TypeError):
-                return {"detail": "year and month must be integers"}, 400
+                return {"detail": t("export.year_month.integer")}, 400
             if not (1 <= month <= 12):
-                return {"detail": "month must be between 1 and 12"}, 400
+                return {"detail": t("export.month.range")}, 400
             if year < 2020 or year > 2100:
-                return {"detail": "year out of valid range"}, 400
+                return {"detail": t("export.year.range")}, 400
             content = _exporter.generate_monthly_statement(pubkey, year, month, format=fmt)
 
         elif report_type == "remittance":
             try:
                 amount_usd = float(body.get("amount_usd", 0))
             except (ValueError, TypeError):
-                return {"detail": "amount_usd must be a number"}, 400
+                return {"detail": t("export.amount.number")}, 400
             if amount_usd <= 0:
-                return {"detail": "amount_usd must be positive"}, 400
+                return {"detail": t("export.amount.positive")}, 400
             content = _exporter.export_remittance_comparison(amount_usd, format=fmt)
 
         elif report_type == "pension":
@@ -147,17 +148,16 @@ def handle_export_report(body: dict, pubkey: str) -> tuple[dict, int]:
                     "current_btc_price": float(body.get("current_btc_price", 60000)),
                 }
             except (ValueError, TypeError):
-                return {"detail": "Invalid numeric parameter"}, 400
+                return {"detail": t("export.numeric.invalid")}, 400
             if params["monthly_usd"] <= 0:
-                return {"detail": "monthly_usd must be positive"}, 400
+                return {"detail": t("export.monthly.positive")}, 400
             if not (1 <= params["years"] <= 50):
-                return {"detail": "years must be between 1 and 50"}, 400
+                return {"detail": t("export.years.range")}, 400
             content = _exporter.export_pension_projection(params, format=fmt)
 
         else:
             return {
-                "detail": f"Unknown report_type '{report_type}'. "
-                          "Valid values: savings, statement, remittance, pension"
+                "detail": t("export.report_type.unknown", type=report_type)
             }, 400
 
         return {

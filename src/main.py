@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler
 
 from app.database import init_db
 from app.config import settings
+from app.i18n import set_request_locale, get_translator, t
 from app.services.price_aggregator import PriceAggregator
 from app.auth.routes import (
     handle_challenge,
@@ -15,6 +16,7 @@ from app.auth.routes import (
     handle_lnurl_callback,
     handle_lnurl_status,
 )
+from app.auth.phone import handle_phone_send, handle_phone_verify
 from app.remittance.routes import handle_compare, handle_fees
 from app.pension.routes import handle_projection as handle_pension_projection
 from app.network.routes import handle_network_status
@@ -118,6 +120,7 @@ from app.education.routes import (
     handle_progress_get,
     handle_progress_lose_heart,
 )
+from app.education.game import handle_game_complete
 from app.notifications.routes import (
     handle_notification_templates,
     handle_notification_preview,
@@ -147,6 +150,15 @@ from app.reminders import RemindersManager, ReminderDispatcher
 from app.recipients import RecipientsManager
 from app.sends import SendExecutor
 from app.sends.routes import handle_execute_send
+from app.splits import SplitsManager, SplitEngine
+from app.splits.routes import (
+    handle_list_profiles,
+    handle_create_profile,
+    handle_get_profile,
+    handle_delete_profile,
+    handle_set_rules,
+    handle_build_split,
+)
 from app.migrations.runner import MigrationRunner
 from app.database import _is_postgres, get_conn
 
@@ -164,6 +176,8 @@ _reminder_dispatcher = ReminderDispatcher(
 )
 _recipients_manager = RecipientsManager()
 _send_executor = SendExecutor(_recipients_manager, _price_aggregator)
+_splits_manager = SplitsManager(_recipients_manager)
+_split_engine = SplitEngine(_splits_manager, _send_executor)
 _logger = StructuredLogger("magma.server")
 
 ROUTES = [
@@ -176,6 +190,8 @@ ROUTES = [
     ("POST", re.compile(r"^/auth/lnurl$"), "_auth_lnurl_create"),
     ("GET", re.compile(r"^/auth/lnurl-callback$"), "_auth_lnurl_callback"),
     ("GET", re.compile(r"^/auth/lnurl-status$"), "_auth_lnurl_status"),
+    ("POST", re.compile(r"^/auth/phone$"), "_auth_phone_send"),
+    ("POST", re.compile(r"^/auth/phone/verify$"), "_auth_phone_verify"),
     ("POST", re.compile(r"^/remittance/compare$"), "_remittance_compare"),
     ("GET", re.compile(r"^/remittance/fees$"), "_remittance_fees"),
     ("POST", re.compile(r"^/savings/project$"), "_savings_project"),
@@ -261,6 +277,7 @@ ROUTES = [
     ("GET",  re.compile(r"^/education/units$"),     "_education_units"),
     ("GET",  re.compile(r"^/education/progress$"),  "_education_progress"),
     ("POST", re.compile(r"^/education/progress/lose-heart$"), "_education_lose_heart"),
+    ("POST", re.compile(r"^/education/game/complete$"), "_education_game_complete"),
     # Notifications
     ("GET",  re.compile(r"^/notifications/templates$"), "_notification_templates"),
     ("POST", re.compile(r"^/notifications/preview$"),   "_notification_preview"),
@@ -284,6 +301,13 @@ ROUTES = [
     ("GET",    re.compile(r"^/reminders/(?P<rid>\d+)/events$"),             "_reminders_events"),
     # Sends (remittance execution)
     ("POST",   re.compile(r"^/sends/execute$"),                             "_sends_execute"),
+    # Splits (non-custodial remittance router)
+    ("GET",    re.compile(r"^/splits$"),                                    "_splits_list"),
+    ("POST",   re.compile(r"^/splits$"),                                    "_splits_create"),
+    ("GET",    re.compile(r"^/splits/(?P<sid>\d+)$"),                       "_splits_get"),
+    ("DELETE", re.compile(r"^/splits/(?P<sid>\d+)$"),                       "_splits_delete"),
+    ("PUT",    re.compile(r"^/splits/(?P<sid>\d+)/rules$"),                 "_splits_set_rules"),
+    ("POST",   re.compile(r"^/splits/build$"),                              "_splits_build"),
 ]
 
 
@@ -317,8 +341,20 @@ class Handler(BaseHTTPRequestHandler):
                 "Access-Control-Allow-Origin", origins[0] if origins else "*"
             )
         self.send_header("Access-Control-Allow-Credentials", "true")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+    def _detect_locale(self, query: dict) -> str:
+        """Detect locale from query param or Accept-Language header."""
+        # 1. Explicit ?locale=es query param takes priority
+        locale = query.get("locale", "").strip().lower()
+        if locale in ("en", "es"):
+            return locale
+        # 2. Accept-Language header
+        accept = self.headers.get("Accept-Language", "")
+        if accept:
+            return get_translator().get_locale(accept)
+        return "en"
 
     def _dispatch(self) -> None:
         import time
@@ -327,6 +363,10 @@ class Handler(BaseHTTPRequestHandler):
         path = raw_path.split("?")[0]
         query_string = raw_path.split("?", 1)[1] if "?" in raw_path else ""
         query = dict(urllib.parse.parse_qsl(query_string))
+
+        # Set per-request locale for i18n
+        locale = self._detect_locale(query)
+        set_request_locale(locale)
 
         for method, pattern, handler_name in ROUTES:
             if self.command != method:
@@ -352,6 +392,9 @@ class Handler(BaseHTTPRequestHandler):
         self._dispatch()
 
     def do_PATCH(self) -> None:
+        self._dispatch()
+
+    def do_PUT(self) -> None:
         self._dispatch()
 
     def do_DELETE(self) -> None:
@@ -426,6 +469,16 @@ class Handler(BaseHTTPRequestHandler):
     ) -> tuple[dict, int]:
         return handle_lnurl_status(query)
 
+    def _auth_phone_send(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_phone_send(body)
+
+    def _auth_phone_verify(
+        self, params: dict, body: dict, query: dict
+    ) -> tuple[dict, int]:
+        return handle_phone_verify(body)
+
     def _savings_project(
         self, params: dict, body: dict, query: dict
     ) -> tuple[dict, int]:
@@ -436,7 +489,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_create_goal(body, me_data["pubkey"])
 
     def _savings_deposit(
@@ -446,7 +499,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         result = handle_record_deposit(body, me_data["pubkey"])
         if result[1] == 200:
             progress = handle_savings_progress(me_data["pubkey"])
@@ -463,7 +516,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_savings_progress(me_data["pubkey"])
 
     def _achievements(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
@@ -471,7 +524,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_achievements(me_data["pubkey"])
 
     def _alerts(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
@@ -501,7 +554,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_get_preferences(me_data["pubkey"])
 
     def _preferences_update(
@@ -511,7 +564,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_update_preferences(body, me_data["pubkey"])
 
     def _preferences_add_alert(
@@ -521,7 +574,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_add_price_alert(body, me_data["pubkey"])
 
     def _preferences_remove_alert(
@@ -531,7 +584,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_remove_price_alert(body, me_data["pubkey"])
 
     # ------------------------------------------------------------------
@@ -593,7 +646,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_user_analytics(me_data["pubkey"])
 
     def _analytics_platform(
@@ -608,7 +661,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_dca_performance(me_data["pubkey"])
 
     def _analytics_leaderboard(
@@ -627,7 +680,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_export_data(body, me_data["pubkey"])
 
     def _export_deposits(
@@ -637,7 +690,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_export_deposits(query, me_data["pubkey"])
 
     def _export_report(
@@ -647,7 +700,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_export_report(body, me_data["pubkey"])
 
     # ------------------------------------------------------------------
@@ -661,7 +714,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_webhook_subscribe(body, me_data["pubkey"])
 
     def _webhook_unsubscribe(
@@ -671,7 +724,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_webhook_unsubscribe(body, me_data["pubkey"])
 
     def _webhook_list(
@@ -681,7 +734,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_webhook_list(me_data["pubkey"])
 
     def _webhook_test(
@@ -691,7 +744,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_webhook_test(body, me_data["pubkey"])
 
     # ------------------------------------------------------------------
@@ -739,7 +792,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_portfolio_holdings(me_data["pubkey"])
 
     def _portfolio_summary(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
@@ -747,7 +800,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_portfolio_summary(me_data["pubkey"])
 
     def _portfolio_transaction(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
@@ -755,7 +808,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_portfolio_transaction(body, me_data["pubkey"])
 
     def _portfolio_performance(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
@@ -763,7 +816,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_portfolio_performance(query, me_data["pubkey"])
 
     def _portfolio_optimize(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
@@ -771,7 +824,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_portfolio_optimize(body, me_data["pubkey"])
 
     def _portfolio_risk(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
@@ -779,7 +832,7 @@ class Handler(BaseHTTPRequestHandler):
         url = f"{settings.PUBLIC_URL}{self.path.split('?')[0]}"
         me_data, status = handle_me(auth_header, url=url, method=self.command)
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_portfolio_risk(me_data["pubkey"])
 
     # ------------------------------------------------------------------
@@ -871,14 +924,18 @@ class Handler(BaseHTTPRequestHandler):
     def _education_progress(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_progress_get(pubkey)
 
     def _education_lose_heart(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_progress_lose_heart(pubkey, body)
+
+    def _education_game_complete(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        pubkey, status = self._auth_pubkey()
+        return handle_game_complete(body, pubkey if status == 200 else None)
 
     # ------------------------------------------------------------------
     # Notifications
@@ -921,43 +978,43 @@ class Handler(BaseHTTPRequestHandler):
     def _recipients_list(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_list_recipients(pubkey)
 
     def _recipients_create(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_create_recipient(body, pubkey)
 
     def _recipients_get(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         try:
             rid = int(params.get("rid", 0))
         except (TypeError, ValueError):
-            return {"detail": "id inválido"}, 400
+            return {"detail": t("error.validation.invalid", field="id")}, 400
         return handle_get_recipient(rid, pubkey)
 
     def _recipients_update(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         try:
             rid = int(params.get("rid", 0))
         except (TypeError, ValueError):
-            return {"detail": "id inválido"}, 400
+            return {"detail": t("error.validation.invalid", field="id")}, 400
         return handle_update_recipient(rid, body, pubkey)
 
     def _recipients_delete(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         try:
             rid = int(params.get("rid", 0))
         except (TypeError, ValueError):
-            return {"detail": "id inválido"}, 400
+            return {"detail": t("error.validation.invalid", field="id")}, 400
         return handle_delete_recipient(rid, pubkey)
 
     # ------------------------------------------------------------------
@@ -967,53 +1024,53 @@ class Handler(BaseHTTPRequestHandler):
     def _reminders_list(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_list_reminders(pubkey)
 
     def _reminders_create(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_create_reminder(body, pubkey)
 
     def _reminders_get(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         try:
             rid = int(params.get("rid", 0))
         except (TypeError, ValueError):
-            return {"detail": "id inválido"}, 400
+            return {"detail": t("error.validation.invalid", field="id")}, 400
         return handle_get_reminder(rid, pubkey)
 
     def _reminders_update(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         try:
             rid = int(params.get("rid", 0))
         except (TypeError, ValueError):
-            return {"detail": "id inválido"}, 400
+            return {"detail": t("error.validation.invalid", field="id")}, 400
         return handle_update_reminder(rid, body, pubkey)
 
     def _reminders_delete(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         try:
             rid = int(params.get("rid", 0))
         except (TypeError, ValueError):
-            return {"detail": "id inválido"}, 400
+            return {"detail": t("error.validation.invalid", field="id")}, 400
         return handle_delete_reminder(rid, pubkey)
 
     def _reminders_events(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         try:
             rid = int(params.get("rid", 0))
         except (TypeError, ValueError):
-            return {"detail": "id inválido"}, 400
+            return {"detail": t("error.validation.invalid", field="id")}, 400
         return handle_list_reminder_events(rid, pubkey, query)
 
     # ------------------------------------------------------------------
@@ -1023,8 +1080,60 @@ class Handler(BaseHTTPRequestHandler):
     def _sends_execute(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
         pubkey, status = self._auth_pubkey()
         if status != 200:
-            return {"detail": "Authentication required"}, 401
+            return {"detail": t("error.unauthorized")}, 401
         return handle_execute_send(body, pubkey, _send_executor)
+
+    # ------------------------------------------------------------------
+    # Splits (non-custodial remittance router)
+    # ------------------------------------------------------------------
+
+    def _splits_list(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        pubkey, status = self._auth_pubkey()
+        if status != 200:
+            return {"detail": t("error.unauthorized")}, 401
+        return handle_list_profiles(pubkey, _splits_manager)
+
+    def _splits_create(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        pubkey, status = self._auth_pubkey()
+        if status != 200:
+            return {"detail": t("error.unauthorized")}, 401
+        return handle_create_profile(body, pubkey, _splits_manager)
+
+    def _splits_get(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        pubkey, status = self._auth_pubkey()
+        if status != 200:
+            return {"detail": t("error.unauthorized")}, 401
+        try:
+            sid = int(params.get("sid", 0))
+        except (TypeError, ValueError):
+            return {"detail": t("error.validation.invalid", field="id")}, 400
+        return handle_get_profile(sid, pubkey, _splits_manager)
+
+    def _splits_delete(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        pubkey, status = self._auth_pubkey()
+        if status != 200:
+            return {"detail": t("error.unauthorized")}, 401
+        try:
+            sid = int(params.get("sid", 0))
+        except (TypeError, ValueError):
+            return {"detail": t("error.validation.invalid", field="id")}, 400
+        return handle_delete_profile(sid, pubkey, _splits_manager)
+
+    def _splits_set_rules(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        pubkey, status = self._auth_pubkey()
+        if status != 200:
+            return {"detail": t("error.unauthorized")}, 401
+        try:
+            sid = int(params.get("sid", 0))
+        except (TypeError, ValueError):
+            return {"detail": t("error.validation.invalid", field="id")}, 400
+        return handle_set_rules(sid, body, pubkey, _splits_manager)
+
+    def _splits_build(self, params: dict, body: dict, query: dict) -> tuple[dict, int]:
+        pubkey, status = self._auth_pubkey()
+        if status != 200:
+            return {"detail": t("error.unauthorized")}, 401
+        return handle_build_split(body, pubkey, _split_engine)
 
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):

@@ -73,7 +73,7 @@ def get_conn():
             path = (
                 url[len("sqlite:///") :]
                 if url.startswith("sqlite:///")
-                else "./vulk.db"
+                else "./magma.db"
             )
             _local.conn = sqlite3.connect(path, check_same_thread=False)
             _local.conn.row_factory = sqlite3.Row

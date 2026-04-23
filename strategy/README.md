@@ -6,6 +6,7 @@
 
 - `impact-analysis.md` — Why this solution matters for El Salvador's Bitcoin ecosystem
 - `operational-model.md` — How the project would be maintained and scaled
+- `market-research.md` — Competitive analysis and market sizing for US→SV remittance corridor
 - `work-log.md` — Link to Google Doc with edit history
 
 ## Work Log

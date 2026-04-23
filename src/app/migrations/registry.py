@@ -439,4 +439,75 @@ MIGRATIONS: list[dict] = [
         """,
         "created_at": "2026-04-23",
     },
+    # ------------------------------------------------------------------
+    # 0017 — education game runs (Magma Miner)
+    # ------------------------------------------------------------------
+    {
+        "id": "0017",
+        "name": "create_education_game_runs",
+        "sql_up": """
+            CREATE TABLE IF NOT EXISTS education_game_runs (
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                pubkey              TEXT    NOT NULL,
+                score               INTEGER NOT NULL DEFAULT 0,
+                blocks_mined        INTEGER NOT NULL DEFAULT 0,
+                halvings_survived   INTEGER NOT NULL DEFAULT 0,
+                duration_seconds    INTEGER NOT NULL DEFAULT 0,
+                xp_earned           INTEGER NOT NULL DEFAULT 0,
+                completed_at        INTEGER NOT NULL,
+                FOREIGN KEY (pubkey) REFERENCES users(pubkey) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_game_runs_pubkey
+                ON education_game_runs (pubkey);
+            CREATE INDEX IF NOT EXISTS idx_game_runs_score
+                ON education_game_runs (score DESC);
+        """,
+        "sql_down": """
+            DROP INDEX IF EXISTS idx_game_runs_score;
+            DROP INDEX IF EXISTS idx_game_runs_pubkey;
+            DROP TABLE IF EXISTS education_game_runs;
+        """,
+        "created_at": "2026-04-24",
+    },
+    # ------------------------------------------------------------------
+    # 0018 — split profiles + rules (non-custodial remittance router)
+    # ------------------------------------------------------------------
+    {
+        "id": "0018",
+        "name": "create_split_profiles_and_rules",
+        "sql_up": """
+            CREATE TABLE IF NOT EXISTS split_profiles (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                pubkey      TEXT    NOT NULL,
+                label       TEXT    NOT NULL,
+                is_active   INTEGER NOT NULL DEFAULT 1,
+                created_at  INTEGER NOT NULL,
+                updated_at  INTEGER NOT NULL,
+                FOREIGN KEY (pubkey) REFERENCES users(pubkey) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_split_profiles_pubkey
+                ON split_profiles (pubkey);
+
+            CREATE TABLE IF NOT EXISTS split_rules (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                profile_id      INTEGER NOT NULL,
+                recipient_id    INTEGER NOT NULL,
+                percentage      INTEGER NOT NULL,
+                priority        INTEGER NOT NULL DEFAULT 0,
+                label           TEXT,
+                created_at      INTEGER NOT NULL,
+                FOREIGN KEY (profile_id) REFERENCES split_profiles(id) ON DELETE CASCADE,
+                FOREIGN KEY (recipient_id) REFERENCES recipients(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_split_rules_profile
+                ON split_rules (profile_id);
+        """,
+        "sql_down": """
+            DROP INDEX IF EXISTS idx_split_rules_profile;
+            DROP TABLE IF EXISTS split_rules;
+            DROP INDEX IF EXISTS idx_split_profiles_pubkey;
+            DROP TABLE IF EXISTS split_profiles;
+        """,
+        "created_at": "2026-04-24",
+    },
 ]

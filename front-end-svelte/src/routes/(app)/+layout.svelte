@@ -6,7 +6,8 @@
   import { i18n } from '$lib/i18n/index.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
-  import { Flame, Mountains, PaperPlaneTilt, PiggyBank, CurrencyBtc, Drop, BookBookmark, Wallet, Door, UserCircle } from 'phosphor-svelte';
+  import { Flame, Mountains, PaperPlaneTilt, PiggyBank, CurrencyBtc, Drop, BookBookmark, Wallet, Door, UserCircle, Sun, Moon, Globe } from 'phosphor-svelte';
+  import { toggleMode, mode } from 'mode-watcher';
 
   let { children } = $props();
 
@@ -61,6 +62,27 @@
     </nav>
 
     <Separator class="my-3" />
+
+    <div class="flex items-center gap-1.5 px-3 mb-2">
+      <button
+        onclick={toggleMode}
+        class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      >
+        {#if mode.current === 'dark'}
+          <Sun size={15} />
+        {:else}
+          <Moon size={15} />
+        {/if}
+        {mode.current === 'dark' ? 'Light' : 'Dark'}
+      </button>
+      <button
+        onclick={() => i18n.setLocale(i18n.locale === 'en' ? 'es' : 'en')}
+        class="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      >
+        <Globe size={15} />
+        {i18n.locale === 'en' ? 'ES' : 'EN'}
+      </button>
+    </div>
 
     <div class="flex flex-col gap-0.5">
       <a

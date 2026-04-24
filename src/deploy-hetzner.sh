@@ -1,40 +1,20 @@
 #!/bin/bash
-# Deploy script for Hetzner Cloud - Run this on your Hetzner server
-
+# Deploy Magma backend on Hetzner - Docker + Postgres
 set -e
 
-# Configuration
-IMAGE_NAME="vulk-backend"
-CONTAINER_NAME="vulk_backend"
-PORT=8000
+echo "=== Magma Backend Deployment ==="
 
-echo "=== Vulk Backend Deployment ==="
+cd /opt/magma
 
-# Navigate to app directory
-cd /app
+# Pull latest code
+git pull origin main
 
-# Pull latest code (if using git)
-# git pull origin main
+# Rebuild and restart containers
+echo "Building and starting containers..."
+docker compose -f docker-compose.prod.yml up -d --build
 
-# Build the image
-echo "Building Docker image..."
-docker build -t $IMAGE_NAME:latest -f Dockerfile .
-
-# Stop existing container
-echo "Stopping existing container..."
-docker stop $CONTAINER_NAME 2>/dev/null || true
-docker rm $CONTAINER_NAME 2>/dev/null || true
-
-# Run new container
-echo "Starting new container..."
-docker run -d \
-  --name $CONTAINER_NAME \
-  --restart always \
-  --env-file .env.production \
-  -p $PORT:8000 \
-  -v $(pwd)/vulk.db:/app/vulk.db \
-  $IMAGE_NAME:latest
-
+echo ""
 echo "=== Deployment complete ==="
-echo "Backend running on port $PORT"
-docker ps | grep $CONTAINER_NAME
+docker compose -f docker-compose.prod.yml ps
+echo ""
+echo "Logs: docker compose -f docker-compose.prod.yml logs -f backend"

@@ -1,7 +1,10 @@
 services:
   backend:
-    image: vulk-backend:latest
-    container_name: vulk_backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: magma-backend:latest
+    container_name: magma_backend
     restart: always
     env_file:
       - .env
@@ -23,16 +26,16 @@ services:
 
   db:
     image: postgres:16-alpine
-    container_name: vulk_db
+    container_name: magma_db
     restart: always
     environment:
-      POSTGRES_DB: vulk
-      POSTGRES_USER: vulk
+      POSTGRES_DB: magma
+      POSTGRES_USER: magma
       POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me-in-prod}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vulk"]
+      test: ["CMD-SHELL", "pg_isready -U magma"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,4 +45,4 @@ volumes:
 
 networks:
   default:
-    name: vulk-network
+    name: magma-network

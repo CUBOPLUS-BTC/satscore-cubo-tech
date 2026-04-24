@@ -12,11 +12,15 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import CurrencyBtc from 'phosphor-svelte/lib/CurrencyBtc';
+	import Geo from '$lib/components/geo.svelte';
 	import SavingsChart from '$lib/components/savings-chart.svelte';
 	import AnimatedNumber from '$lib/components/animated-number.svelte';
 	import { animateIn, staggerChildren, pressScale } from '$lib/motion';
 	import PdfExportButton from '$lib/components/pdf-export-button.svelte';
 	import { exportSavingsPdf } from '$lib/utils/export-pdf';
+	import Wallet from 'phosphor-svelte/lib/Wallet';
+	import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
+	import { resolve } from '$app/paths';
 
 	let savingsChartRef = $state<HTMLElement | null>(null);
 
@@ -131,7 +135,7 @@
 
 				{#if !projection && !isProjecting}
 					<div class="rounded-2xl border border-dashed border-border bg-muted p-8 text-center space-y-3" use:animateIn={{ y: [12, 0], delay: 0.2 }}>
-						<CurrencyBtc size={36} class="mx-auto text-muted-foreground" weight="regular" />
+						<Geo state="stacking" class="w-24 h-24 mx-auto" />
 						<p class="text-muted-foreground text-sm">{i18n.t.savings.subtitle}</p>
 						<p class="text-xs text-muted-foreground">${monthlyAmount}/mo &middot; {years} {i18n.t.savings.years.toLowerCase()}</p>
 					</div>
@@ -187,7 +191,15 @@
 							</div>
 						{/if}
 
-						<div class="flex justify-end pt-2">
+						<div class="flex items-center justify-between pt-2 gap-3">
+							<a
+								href={resolve('/wallets')}
+								class="group flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+							>
+								<Wallet size={14} class="text-cyan-500 shrink-0" />
+								<span>{i18n.t.wallets.tipSavings}</span>
+								<ArrowRight size={12} class="opacity-0 group-hover:opacity-100 transition-opacity" />
+							</a>
 							<PdfExportButton onclick={handleExportPdf} label="Exportar proyección" />
 						</div>
 					</div>

@@ -101,8 +101,10 @@ export interface PegAlternative {
 export interface LiquidWallet {
   name: string;
   by: string;
+  custody?: string;
   platforms: string[];
   features: string[];
+  description?: string;
 }
 
 export interface LiquidPegInfo {

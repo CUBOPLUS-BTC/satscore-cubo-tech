@@ -17,6 +17,8 @@
 	import Wallet from 'phosphor-svelte/lib/Wallet';
 	import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
 	import CheckCircle from 'phosphor-svelte/lib/CheckCircle';
+	import Geo from '$lib/components/geo.svelte';
+	import WalletGuide from '$lib/components/wallet-guide.svelte';
 	import type {
 		LiquidOverview,
 		LiquidAssets,
@@ -105,7 +107,7 @@
 <div class="space-y-10">
 	<section use:animateIn={{ y: [24, 0], duration: 0.5 }}>
 		<div class="flex items-center gap-3 mb-2">
-			<Drop size={32} class="text-cyan-500" weight="fill" />
+			<Geo state="alert" class="w-14 h-14 shrink-0" />
 			<div>
 				<h1 class="font-heading text-2xl font-bold">{i18n.t.liquid.title}</h1>
 				<p class="text-sm text-muted-foreground">{i18n.t.liquid.subtitle}</p>
@@ -490,18 +492,26 @@
 
 					<div class="space-y-3">
 						{#each pegInfo.wallets as wallet (wallet.name)}
-							<div class="p-3 rounded-lg border border-border space-y-2">
-								<div class="flex items-center justify-between">
-									<div>
-										<h3 class="text-sm font-semibold">{wallet.name}</h3>
+							<div class="p-4 rounded-xl border border-border space-y-2.5 hover:bg-muted/50 transition-colors">
+								<div class="flex items-start justify-between gap-3">
+									<div class="min-w-0">
+										<div class="flex items-center gap-2 flex-wrap">
+											<h3 class="text-sm font-semibold">{wallet.name}</h3>
+											<Badge variant={wallet.custody === 'self' ? 'default' : 'secondary'} class="text-[10px]">
+												{wallet.custody === 'self' ? (i18n.locale === 'es' ? 'Autocustodia' : 'Self-custody') : 'Custodial'}
+											</Badge>
+										</div>
 										<span class="text-[10px] text-muted-foreground">{wallet.by}</span>
 									</div>
-									<div class="flex gap-1">
+									<div class="flex gap-1 shrink-0">
 										{#each wallet.platforms as platform (platform)}
 											<Badge variant="outline" class="text-[10px]">{platform}</Badge>
 										{/each}
 									</div>
 								</div>
+								{#if wallet.description}
+									<p class="text-xs text-muted-foreground leading-relaxed">{wallet.description}</p>
+								{/if}
 								<div class="flex flex-wrap gap-1">
 									{#each wallet.features as feature (feature)}
 										<Badge variant="secondary" class="text-[10px]">{feature}</Badge>
@@ -514,4 +524,11 @@
 			</Card>
 		</section>
 	{/if}
+
+	<!-- Wallet Intelligence -->
+	<section use:animateIn={{ y: [16, 0], delay: 0.2 }}>
+		<h2 class="font-heading text-lg font-semibold mb-1">{i18n.t.wallets.title}</h2>
+		<p class="text-sm text-muted-foreground mb-4">{i18n.t.wallets.subtitle}</p>
+		<WalletGuide filter="liquid" />
+	</section>
 </div>

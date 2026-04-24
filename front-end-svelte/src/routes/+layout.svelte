@@ -19,7 +19,7 @@
 	<meta property="og:type" content="website" />
 </svelte:head>
 
-<ModeWatcher defaultMode="dark" />
+<ModeWatcher defaultMode="light" track={false} />
 <Toaster />
 <QueryClientProvider client={queryClient}>
 	{@render children()}

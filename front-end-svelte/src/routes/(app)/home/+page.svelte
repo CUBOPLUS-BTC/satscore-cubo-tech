@@ -11,7 +11,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
-	import { PaperPlaneTilt, PiggyBank, CurrencyBtc, BookBookmark, Cube, ArrowRight, ArrowsLeftRight } from 'phosphor-svelte';
+	import { PaperPlaneTilt, PiggyBank, CurrencyBtc, BookBookmark, Cube, ArrowRight, ArrowsLeftRight, Wallet } from 'phosphor-svelte';
 	import Geo from '$lib/components/geo.svelte';
 	import AnimatedNumber from '$lib/components/animated-number.svelte';
 	import { animateIn, staggerChildren, inViewStagger, springHover, pressScale } from '$lib/motion';
@@ -50,6 +50,14 @@
 			: 0
 	);
 
+	// Geo reacts to price state
+	let geoState = $derived.by(() => {
+		if (!price) return 'sleeping' as const;
+		if (price.has_warning) return 'nervous' as const;
+		if (price.sources_count >= 3) return 'stacking' as const;
+		return 'idle' as const;
+	});
+
 	let onboarded = $state(browser ? !!localStorage.getItem('magma_onboarded') : true);
 
 	function dismissOnboarding() {
@@ -87,6 +95,13 @@
 			href: '/education',
 			color: 'text-violet-500',
 		},
+		{
+			icon: Wallet,
+			title: () => i18n.t.wallets.tipHome,
+			description: () => i18n.t.wallets.tipHomeDesc,
+			href: '/wallets',
+			color: 'text-cyan-500',
+		},
 	]);
 </script>
 
@@ -118,7 +133,7 @@
 	<section use:animateIn={{ y: [24, 0], duration: 0.6 }}>
 		{#if price}
 			<div class="flex items-start gap-5">
-				<Geo state="idle" class="w-20 h-20 shrink-0 hidden sm:block" />
+				<Geo state={geoState} class="w-20 h-20 shrink-0 hidden sm:block" />
 				<div class="space-y-2">
 					<span class="text-xs font-semibold text-muted-foreground uppercase tracking-widest">BTC / USD</span>
 					<div class="font-heading text-5xl sm:text-6xl lg:text-7xl font-bold tabular-nums tracking-tight text-foreground">
@@ -137,10 +152,13 @@
 				</div>
 			</div>
 		{:else}
-			<div class="space-y-3">
-				<Skeleton class="h-3 w-16" />
-				<Skeleton class="h-16 w-72" />
-				<Skeleton class="h-5 w-36" />
+			<div class="flex items-start gap-5">
+				<Geo state="sleeping" class="w-20 h-20 shrink-0 hidden sm:block" />
+				<div class="space-y-3">
+					<Skeleton class="h-3 w-16" />
+					<Skeleton class="h-16 w-72" />
+					<Skeleton class="h-5 w-36" />
+				</div>
 			</div>
 		{/if}
 	</section>
@@ -153,7 +171,7 @@
 		<Card>
 			<CardContent class="pt-6 space-y-4">
 				<div class="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-					<ArrowsLeftRight size={18} class="text-amber-500" />
+					<Geo state="calculating" class="w-7 h-7" />
 					{i18n.t.home.calculator}
 				</div>
 				<div class="space-y-3">

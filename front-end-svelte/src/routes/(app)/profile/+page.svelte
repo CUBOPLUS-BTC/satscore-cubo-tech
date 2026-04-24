@@ -7,7 +7,6 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { toggleMode } from 'mode-watcher';
 	import { Card, CardHeader, CardTitle, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
@@ -18,8 +17,6 @@
 	import Copy from 'phosphor-svelte/lib/Copy';
 	import Check from 'phosphor-svelte/lib/Check';
 	import User from 'phosphor-svelte/lib/User';
-	import Sun from 'phosphor-svelte/lib/Sun';
-	import Moon from 'phosphor-svelte/lib/Moon';
 	import Globe from 'phosphor-svelte/lib/Globe';
 	import Door from 'phosphor-svelte/lib/Door';
 	import AnimatedNumber from '$lib/components/animated-number.svelte';
@@ -183,21 +180,6 @@
 				<CardTitle class="font-heading">{i18n.t.profile.settings}</CardTitle>
 			</CardHeader>
 			<CardContent class="space-y-1">
-				<button
-					onclick={toggleMode}
-					class="flex items-center justify-between w-full rounded-xl px-3 py-3 text-sm hover:bg-muted transition-colors"
-				>
-					<span class="flex items-center gap-3">
-						<Sun size={18} class="dark:hidden" />
-						<Moon size={18} class="hidden dark:block" />
-						{i18n.t.profile.theme}
-					</span>
-					<span class="text-muted-foreground text-xs">
-						<span class="dark:hidden">{i18n.t.profile.light}</span>
-						<span class="hidden dark:inline">{i18n.t.profile.dark}</span>
-					</span>
-				</button>
-
 				<button
 					onclick={() => i18n.setLocale(i18n.locale === 'en' ? 'es' : 'en')}
 					class="flex items-center justify-between w-full rounded-xl px-3 py-3 text-sm hover:bg-muted transition-colors"

@@ -22,6 +22,9 @@
 	import { priceStore } from '$lib/stores/price.svelte';
 	import PdfExportButton from '$lib/components/pdf-export-button.svelte';
 	import { exportPensionPdf } from '$lib/utils/export-pdf';
+	import Wallet from 'phosphor-svelte/lib/Wallet';
+	import ArrowRight from 'phosphor-svelte/lib/ArrowRight';
+	import { resolve } from '$app/paths';
 
 	let chartContainerRef = $state<HTMLElement | null>(null);
 
@@ -186,7 +189,7 @@
 	</div>
 {:else if !fullResult && !error}
 	<div class="mt-6 rounded-2xl border border-dashed border-border bg-muted p-8 text-center space-y-3" use:animateIn={{ y: [12, 0], delay: 0.2 }}>
-		<Geo state="waiting" class="w-24 h-24 mx-auto" />
+		<Geo state="hodl" class="w-24 h-24 mx-auto" />
 		<p class="text-muted-foreground text-sm">{i18n.t.pension.emptyState}</p>
 	</div>
 {/if}
@@ -196,7 +199,7 @@
 
 		<div class="flex items-center justify-between gap-3 flex-wrap">
 			<div class="flex items-center gap-3">
-				<Geo state="success" class="w-16 h-16 shrink-0" />
+				<Geo state="hodl" class="w-16 h-16 shrink-0" />
 				<div>
 					<p class="text-sm font-medium text-foreground">{i18n.t.pension.resultsReady}</p>
 					<Badge variant="secondary" class="text-xs font-normal mt-1">
@@ -361,5 +364,17 @@
 		{/if}
 
 		<p class="text-xs text-muted-foreground text-center pt-4">{i18n.t.pension.disclaimer}</p>
+
+		<a
+			href={resolve('/wallets')}
+			class="group flex items-center gap-3 rounded-2xl border border-dashed border-border p-4 mt-2 hover:border-primary/30 hover:bg-muted/40 transition-all"
+		>
+			<Wallet size={20} class="text-cyan-500 shrink-0" />
+			<div class="flex-1 min-w-0">
+				<p class="text-sm font-medium text-foreground">{i18n.t.wallets.seeGuide}</p>
+				<p class="text-xs text-muted-foreground">{i18n.t.wallets.tipPension}</p>
+			</div>
+			<ArrowRight size={16} class="text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+		</a>
 	</div>
 {/if}

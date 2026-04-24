@@ -177,6 +177,57 @@ function createAuth() {
       }
     },
 
+    async sendPhoneCode(phone: string): Promise<string | null> {
+      isLoading = true;
+      error = null;
+      try {
+        const res = await fetch(endpoints.auth.phoneSend, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || 'Failed to send code');
+        }
+        const data = await res.json();
+        return data.dev_code ?? null;
+      } catch (e) {
+        error = e instanceof Error ? e.message : 'Failed to send code';
+        throw e;
+      } finally {
+        isLoading = false;
+      }
+    },
+
+    async verifyPhoneCode(phone: string, code: string): Promise<void> {
+      isLoading = true;
+      error = null;
+      try {
+        const res = await fetch(endpoints.auth.phoneVerify, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, code }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.detail || 'Verification failed');
+        }
+        const data = await res.json();
+        token = data.token;
+        publicKey = data.pubkey;
+        if (browser) {
+          localStorage.setItem(TOKEN_KEY, data.token);
+          localStorage.setItem(PUBKEY_KEY, data.pubkey);
+        }
+      } catch (e) {
+        error = e instanceof Error ? e.message : 'Verification failed';
+        throw e;
+      } finally {
+        isLoading = false;
+      }
+    },
+
     stopPolling(): void {
       if (_pollInterval) {
         clearInterval(_pollInterval);

@@ -6,7 +6,7 @@
   import { i18n } from '$lib/i18n/index.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
-  import { Flame, Mountains, PaperPlaneTilt, PiggyBank, CurrencyBtc, Drop, BookBookmark, Door, UserCircle } from 'phosphor-svelte';
+  import { Flame, Mountains, PaperPlaneTilt, PiggyBank, CurrencyBtc, Drop, BookBookmark, Wallet, Door, UserCircle } from 'phosphor-svelte';
 
   let { children } = $props();
 
@@ -21,8 +21,9 @@
     { href: '/remittance', icon: PaperPlaneTilt, label: i18n.t.nav.remittance },
     { href: '/pension', icon: PiggyBank, label: i18n.t.nav.pension },
     { href: '/savings', icon: CurrencyBtc, label: i18n.t.nav.savings },
-    // { href: '/liquid', icon: Drop, label: i18n.t.nav.liquid },
+    { href: '/liquid', icon: Drop, label: i18n.t.nav.liquid },
     { href: '/education', icon: BookBookmark, label: i18n.t.nav.education },
+    { href: '/wallets', icon: Wallet, label: i18n.t.nav.wallets },
   ]);
 
   let currentPath = $derived(page.url.pathname);

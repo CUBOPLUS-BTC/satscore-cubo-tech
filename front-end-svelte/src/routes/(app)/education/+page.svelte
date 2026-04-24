@@ -26,6 +26,9 @@
 	import Star from 'phosphor-svelte/lib/Star';
 	import Lightning from 'phosphor-svelte/lib/Lightning';
 	import PlayCircle from 'phosphor-svelte/lib/PlayCircle';
+	import Geo from '$lib/components/geo.svelte';
+	import MagmaMiner from '$lib/components/game/MagmaMiner.svelte';
+	import { resolve } from '$app/paths';
 	import type {
 		UnitsResponse,
 		ProgressResponse,
@@ -37,7 +40,7 @@
 
 	const qc = useQueryClient();
 
-	type View = 'path' | 'lesson' | 'quiz' | 'result' | 'no-hearts' | 'glossary';
+	type View = 'path' | 'lesson' | 'quiz' | 'result' | 'no-hearts' | 'glossary' | 'game';
 	let view = $state<View>('path');
 	let selectedId = $state<string | null>(null);
 	let glossarySearch = $state('');
@@ -175,6 +178,16 @@
 		quizResult = null;
 	}
 
+	// ── Game handlers ─────────────────────────────────────────────────────
+	async function handleGameScore(data: { score: number; blocks_mined: number; halvings_survived: number; duration_seconds: number }) {
+		try {
+			await api.post(endpoints.education.gameComplete, data);
+			qc.invalidateQueries({ queryKey: ['education-progress'] });
+		} catch {
+			// Never block the game on a server glitch
+		}
+	}
+
 	// ── Format helpers ────────────────────────────────────────────────────────
 	function fmtCountdown(seconds: number): string {
 		if (seconds <= 0) return '0m';
@@ -237,7 +250,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════
      GAMIFICATION HEADER (visible in path/lesson/quiz views when logged in)
      ═══════════════════════════════════════════════════════════════════════ -->
-{#if gamState && view !== 'result' && view !== 'no-hearts' && view !== 'glossary'}
+{#if gamState && view !== 'result' && view !== 'no-hearts' && view !== 'glossary' && view !== 'game'}
 	<div class="sticky top-0 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 mb-6 bg-background/95 backdrop-blur-sm border-b border-border">
 		<div class="flex items-center gap-4 flex-wrap">
 			<!-- Streak -->
@@ -308,15 +321,21 @@
 		<!-- Header -->
 		<div class="flex items-start justify-between gap-3">
 			<div class="flex items-center gap-3">
-				<BookBookmark size={28} class="text-primary" weight="fill" />
+				<Geo state="studying" class="w-14 h-14 shrink-0" />
 				<div>
 					<h1 class="font-heading text-2xl font-bold tracking-tight">{i18n.t.education.pathTitle}</h1>
 					<p class="text-sm text-muted-foreground">{i18n.t.education.pathSubtitle}</p>
 				</div>
 			</div>
-			<Button variant="outline" size="sm" onclick={() => (view = 'glossary')}>
-				{i18n.t.education.glossary}
-			</Button>
+			<div class="flex gap-2">
+				<Button size="sm" class="gap-1.5" onclick={() => (view = 'game')}>
+					<PlayCircle size={14} weight="fill" />
+					{i18n.t.education.game.play}
+				</Button>
+				<Button variant="outline" size="sm" onclick={() => (view = 'glossary')}>
+					{i18n.t.education.glossary}
+				</Button>
+			</div>
 		</div>
 
 		{#if unitsQuery.isPending}
@@ -600,9 +619,9 @@
 		<Card class="ring-1 {quizResult.score.passed ? 'ring-green-500/40' : 'ring-amber-500/40'}">
 			<CardContent class="pt-6 text-center space-y-3">
 				{#if quizResult.score.passed}
-					<Trophy size={48} class="mx-auto text-amber-500" weight="fill" />
+					<Geo state="success" class="w-20 h-20 mx-auto" />
 				{:else}
-					<BookBookmark size={48} class="mx-auto text-amber-500" weight="regular" />
+					<Geo state="nervous" class="w-20 h-20 mx-auto" />
 				{/if}
 				<p class="font-heading text-5xl font-bold tabular-nums {quizResult.score.passed ? 'text-green-500' : 'text-amber-500'}">
 					{quizResult.score.percentage}%
@@ -652,6 +671,21 @@
 			{/each}
 		</div>
 
+		<!-- Wallet tip (only on pass) -->
+		{#if quizResult.score.passed}
+			<a
+				href={resolve('/wallets')}
+				class="group flex items-center gap-3 rounded-2xl border border-dashed border-border p-4 hover:border-primary/30 hover:bg-muted/40 transition-all"
+			>
+				<Geo state="stacking" class="w-10 h-10 shrink-0" />
+				<div class="flex-1 min-w-0">
+					<p class="text-sm font-medium text-foreground">{i18n.t.wallets.seeGuide}</p>
+					<p class="text-xs text-muted-foreground">{i18n.t.wallets.tipEducation}</p>
+				</div>
+				<ArrowRight size={16} class="text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+			</a>
+		{/if}
+
 		<!-- Actions -->
 		<div class="flex gap-3">
 			<Button variant="outline" class="flex-1" onclick={() => (view = 'lesson')}>
@@ -669,6 +703,7 @@
      ═══════════════════════════════════════════════════════════════════════ -->
 {:else if view === 'no-hearts'}
 	<div class="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-5" use:animateIn={{ y: [16, 0] }}>
+		<Geo state="sleeping" class="w-20 h-20 mx-auto" />
 		<div class="flex gap-1">
 			{#each Array(5) as _, i (i)}
 				<Heart size={32} class="text-muted-foreground/30" />
@@ -740,4 +775,10 @@
 			</div>
 		{/if}
 	</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     GAME VIEW — Magma Miner
+     ═══════════════════════════════════════════════════════════════════════ -->
+{:else if view === 'game'}
+	<MagmaMiner onBack={goToPath} onSubmitScore={handleGameScore} />
 {/if}

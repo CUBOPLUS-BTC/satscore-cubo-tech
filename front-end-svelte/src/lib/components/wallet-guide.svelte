@@ -17,6 +17,7 @@
 		custody: 'self' | 'custodial';
 		types: WalletType[];
 		kyc: boolean;
+		lnurlAuth?: boolean;
 		platforms: string[];
 		headline: string;
 		howItWorks: string;
@@ -69,6 +70,12 @@
 							<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
 								<Warning size={13} weight="fill" />
 								{i18n.t.wallets.custodial}
+							</span>
+						{/if}
+						{#if w.lnurlAuth}
+							<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+								<Lightning size={13} weight="fill" />
+								Login Magma
 							</span>
 						{/if}
 					</div>
